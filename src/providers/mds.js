@@ -3,7 +3,6 @@ const request = require("request");
 const tripMatch = require("../matchers/trip");
 const changeMatch = require("../matchers/change");
 const crypto = require("crypto");
-const cliProgress = require('cli-progress');
 
 async function trips(
   provider,
@@ -21,8 +20,6 @@ async function trips(
     start += 60 * 60 * 1000;
   }
   console.log("Sending requests for", endTimes.length, "hours")
-  const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-  progressBar.start(endTimes.length, 0);
 
   const promises = endTimes.map((end) => {
     return new Promise(async (resolve, reject) => {
@@ -70,7 +67,6 @@ async function trips(
             opts.url = data.links.next;
             scan(opts, done);
           } else {
-            progressBar.increment();
             done();
           }
         });
@@ -81,7 +77,6 @@ async function trips(
       });
     });
   });
-  progressBar.stop();
   return Promise.all(promises);
 }
 
@@ -101,8 +96,6 @@ async function changes(
     start += 60 * 60 * 1000;
   }
   console.log("Sending requests for", eventTimes.length, "hours")
-  const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-  progressBar.start(eventTimes.length, 0);
 
   const promises = eventTimes.map((event) => {
     return new Promise(async (resolve, reject) => {
@@ -141,14 +134,12 @@ async function changes(
             opts.url = data.links.next;
             scan(opts, done);
           } else {
-            progressBar.increment();
             done();
           }
         });
       }
 
       await scan(opts, () => {
-        progressBar.stop();
         resolve();
       });
     });

@@ -31,7 +31,6 @@
     "@oclif/config": "^1.13.0",
     "@turf/turf": "^5.1.6",
     "byline": "^5.0.0",
-    "cli-progress": "^3.11.2",
     "d3-queue": "^3.0.7",
     "h3-js": "^3.4.2",
     "level": "^4.0.0",
