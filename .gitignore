@@ -1,4 +1,5 @@
 node_modules
 sandag-graph
-config.json
+data
 .idea
+shst-cache

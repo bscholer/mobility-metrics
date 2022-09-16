@@ -11,6 +11,8 @@ RUN chmod -R 777 /usr/lib
 
 WORKDIR /app
 
+RUN npm install -g serve
+
 COPY ./package.json ./
 COPY ./package-lock.json ./
 
