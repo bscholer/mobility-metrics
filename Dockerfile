@@ -1,7 +1,25 @@
-FROM node:11
+FROM node:11.15.0-stretch
 
-ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
-ENV PATH=$PATH:/home/node/.npm-global/bin
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install vim -y
 
-USER node
-RUN npm install -g mobility-metrics
+RUN chown "$USER" -R /usr/lib
+RUN chmod -R 777 /usr/lib
+
+#RUN git clone https://github.com/bscholer/mobility-metrics.git
+WORKDIR /app
+
+#RUN npm i -g yalc
+
+COPY ./package.json ./
+COPY ./package-lock.json ./
+
+RUN npm install
+
+COPY ./ ./
+
+#RUN npm install -g mobility-metrics
+# create a symlink
+RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
+
