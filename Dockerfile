@@ -1,25 +1,24 @@
 FROM node:11.15.0-stretch
 
+# dev only, remove me later
 RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get install vim -y
 
+# this seems to be necessary for mobility-metrics
 RUN chown "$USER" -R /usr/lib
 RUN chmod -R 777 /usr/lib
 
-#RUN git clone https://github.com/bscholer/mobility-metrics.git
 WORKDIR /app
-
-#RUN npm i -g yalc
 
 COPY ./package.json ./
 COPY ./package-lock.json ./
 
-RUN npm install
+# install dependencies
+RUN npm ci
 
+# copy source code
 COPY ./ ./
 
-#RUN npm install -g mobility-metrics
-# create a symlink
+# create a symlink so that we can actually run mobility-metrics
 RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
-
