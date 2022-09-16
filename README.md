@@ -147,7 +147,7 @@ Docker is supported, and is recommended when installation is challenging on besp
 
 ```sh
 # clone repo
-git clone git@github.com:sharedstreets/mobility-metrics.git
+git clone git@github.com:bscholer/mobility-metrics.git
 cd mobility-metrics
 
 # build image
