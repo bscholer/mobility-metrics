@@ -1,8 +1,9 @@
 # Mobility Metrics
----
 
 ## Trouble installing upstream mobility-metrics?
-This repo should successfully install in [Docker](#Docker)!
+Greetings, weary traveler. I have struggled for countless days and nights to get this project to install, provided all the issues with the `osrm` dependency. Good news 🎉! This repo should successfully install in [Docker](#Docker)!
+
+---
 
 SharedStreets Mobility Metrics is an open source command line interface (CLI) and frontend for ingestion and analysis of Mobility Data Specification (MDS) mobility data. It is capable of reading raw MDS and aggregating useful & privacy-protecting metrics for longterm storage and analysis. Raw data is not persisted after aggregation.
 
