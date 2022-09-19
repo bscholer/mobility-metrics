@@ -40,6 +40,7 @@ const summarize = async function(
     console.log("  summarizing...");
     for (let provider of providers) {
       var cacheProviderPath = path.join(cacheDayPath, provider);
+      mkdirp.sync(cacheProviderPath);
 
       console.log("    " + provider + "...");
 

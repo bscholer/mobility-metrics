@@ -116,6 +116,11 @@ async function changes(
           if (err) throw err;
           var data = JSON.parse(body);
 
+          if (!('data' in data && 'status_changes' in data.data)) {
+            console.log(body);
+            throw new Error("No trips returned");
+          }
+
           // write any returned changes to stream
           for (const change of data.data.status_changes) {
             const match = await changeMatch(change, config, graph);

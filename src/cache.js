@@ -7,7 +7,7 @@ const moment = require("moment");
 const local = require("./providers/local");
 const mds = require("./providers/mds");
 
-const cache = async function(
+const cache = async function (
   startDay,
   endDay,
   reportDay,
@@ -48,6 +48,13 @@ const cache = async function(
       cacheDayProviderPath,
       "changes.json"
     );
+
+    // Create empty files ahead of time in case nothing gets written
+    let fh = await fs.open(cacheDayProviderTripsPath, 'w');
+    await fh.close();
+
+    fh = await fs.open(cacheDayProviderChangesPath, 'w');
+    await fh.close();
 
     var cacheDayProviderTripsStream = fs.createWriteStream(
       cacheDayProviderTripsPath
