@@ -49,12 +49,20 @@ const cache = async function (
       "changes.json"
     );
 
-    // Create empty files ahead of time in case nothing gets written
-    let fh = await fs.open(cacheDayProviderTripsPath, 'w');
-    await fh.close();
+    // I don't think this is necessary. I had added it to make sure that the files existed, but it was only causing
+    // problems when the cache directory was not empty.
+    // The cache directory should always be empty when the script is run, so this is a non-issue.
 
-    fh = await fs.open(cacheDayProviderChangesPath, 'w');
-    await fh.close();
+    // // Create empty files ahead of time in case nothing gets written
+    // let fh = await fs.open(cacheDayProviderTripsPath, 'w', (err) => {
+    //   console.error(err);
+    // });
+    // await fh.close();
+    //
+    // fh = await fs.open(cacheDayProviderChangesPath, 'w', (err) => {
+    //   console.error(err);
+    // });
+    // await fh.close();
 
     var cacheDayProviderTripsStream = fs.createWriteStream(
       cacheDayProviderTripsPath

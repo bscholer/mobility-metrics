@@ -3,7 +3,7 @@
     <deployment type="dockerfile">
       <settings>
         <option name="imageTag" value="mobility-metrics-image" />
-        <option name="command" value="mobility-metrics --config /data/config.json --public /data/public --cache /data/cache --day 2022-09-07;" />
+        <option name="command" value="mobility-metrics --config /data/config.json --public /data/public --cache /cache --day 2022-09-07;" />
         <option name="containerName" value="mobility-metrics" />
         <option name="portBindings">
           <list>

@@ -3,3 +3,7 @@ sandag-graph
 data
 .idea
 shst-cache
+
+.undodir/
+
+Session.vim
