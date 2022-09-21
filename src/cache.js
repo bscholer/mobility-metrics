@@ -72,7 +72,7 @@ const cache = async function (
     );
 
     if (provider.type === "mds") {
-      await mds.trips(
+      await mds.cacheFromMds(
         provider,
         cacheDayProviderTripsStream,
         start,
@@ -80,9 +80,10 @@ const cache = async function (
         graph,
         config,
         cacheDayProviderLogPath,
-        version
+        version,
+        "trips"
       );
-      await mds.changes(
+      await mds.cacheFromMds(
         provider,
         cacheDayProviderChangesStream,
         start,
@@ -90,7 +91,8 @@ const cache = async function (
         graph,
         config,
         cacheDayProviderLogPath,
-        version
+        version,
+        "status_changes"
       );
     } else if (provider.type === "local") {
       await local.trips(

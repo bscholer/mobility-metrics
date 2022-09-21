@@ -11,7 +11,7 @@ WORKDIR /app
 COPY ./package.json ./
 COPY ./package-lock.json ./
 
-# install dependencies
+# install dependencies. npm ci uses package-lock.json for better reliability
 RUN npm ci
 
 # copy source code
@@ -21,4 +21,4 @@ COPY ./ ./
 RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
 
 # send it!
-ENTRYPOINT ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public", "--cache", "/cache", "--day", "2022-09-07"]
+ENTRYPOINT ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public", "--cache", "/cache", "--day", "2022-09-20"]
