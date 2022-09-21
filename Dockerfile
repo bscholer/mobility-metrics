@@ -1,20 +1,13 @@
+# start with a base image, based on Alpine Linux (very lightweight distro)
 FROM node:11.15.0-alpine
 
-# dev only, remove me later
-# RUN apt-get update
-# RUN apt-get upgrade -y
-# RUN apt-get install vim -y
-
-# this seems to be necessary for mobility-metrics
-# RUN chown "$USER" -R /usr/lib
-RUN chmod -R 777 /usr/lib
-
+# install python and make
 RUN apk add g++ make python
 
+# change working directory
 WORKDIR /app
 
-# RUN npm install -g serve
-
+# copy both 'package.json' and 'package-lock.json'
 COPY ./package.json ./
 COPY ./package-lock.json ./
 
@@ -27,4 +20,5 @@ COPY ./ ./
 # create a symlink so that we can actually run mobility-metrics
 RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
 
-ENTRYPOINT ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public.json", "--cache", "/cache", "--day", "2022-09-07"]
+# send it!
+ENTRYPOINT ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public", "--cache", "/cache", "--day", "2022-09-07"]

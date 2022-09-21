@@ -19,7 +19,7 @@ stop:
 	- docker rm mobility-metrics
 
 run:
-	docker run -it -d -v ./data:/data -v ./shst-cache:/root/.shst --name mobility-metrics mobility-metrics
+	docker run -it -d -v data:/data -v shst-cache:/root/.shst --name mobility-metrics mobility-metrics -m 4g --cpus 2
 
 exec:
 	docker exec -it mobility-metrics /bin/bash
