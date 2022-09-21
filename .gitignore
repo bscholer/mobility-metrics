@@ -7,3 +7,4 @@ shst-cache
 .undodir/
 
 Session.vim
+deploy-aci.yaml

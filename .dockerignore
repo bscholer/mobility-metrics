@@ -3,3 +3,4 @@ data
 shst-cache
 .idea
 .git
+deploy-aci.yaml

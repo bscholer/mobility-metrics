@@ -26,3 +26,5 @@ COPY ./ ./
 
 # create a symlink so that we can actually run mobility-metrics
 RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
+
+ENTRYPOINT ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public.json", "--cache", "/cache", "--day", "2022-09-07"]
