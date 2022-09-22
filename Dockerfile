@@ -2,7 +2,7 @@
 FROM node:11.15.0-alpine
 
 # install python and make
-RUN apk add g++ make python bash libc6-compat
+RUN apk add g++ make python bash libc6-compat dos2unix
 RUN ln -s /lib/libc.musl-x86_64.so.1 /lib/ld-linux-x86-64.so.2
 
 # change working directory
@@ -17,6 +17,9 @@ RUN npm ci
 
 # copy source code
 COPY ./ ./
+
+# ensure unix line endings
+RUN find src/ -type f -print0 | xargs -0 dos2unix
 
 # create a symlink so that we can actually run mobility-metrics
 RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
