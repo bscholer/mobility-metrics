@@ -21,4 +21,4 @@ COPY ./ ./
 RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
 
 # send it!
-ENTRYPOINT ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public", "--cache", "/cache", "--day", "2022-09-20"]
+ENTRYPOINT ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public", "--cache", "/cache", "--endDay", "2022-09-20"]
