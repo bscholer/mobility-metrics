@@ -2,16 +2,16 @@
 FROM node:11.15.0-alpine
 
 # install python and make
-RUN apk add g++ make python
+RUN apk add g++ make python bash
 
 # change working directory
 WORKDIR /app
 
 # copy both 'package.json' and 'package-lock.json'
-COPY ./package.json ./
-COPY ./package-lock.json ./
+COPY package.json ./
+COPY package-lock.json ./
 
-# install dependencies. npm ci uses package-lock.json for better reliability
+# install dependencies. npm ci uses package-lock.json for better speed and reliability
 RUN npm ci
 
 # copy source code

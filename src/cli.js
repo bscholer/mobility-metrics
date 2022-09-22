@@ -19,6 +19,8 @@ if (argv.version || argv.v) {
   process.exit(0);
 }
 
+let dateOption;
+
 if (argv.help || argv.h || Object.keys(argv).length === 1) {
   var help = "";
   help += "\nmobility-metrics\n";
@@ -27,7 +29,12 @@ if (argv.help || argv.h || Object.keys(argv).length === 1) {
   help += "--config      path to config json file\n";
   help += "--public      path to public metric directory\n";
   help += "--cache       path to temporary data cache\n";
-  help += "--day    replaces startDay, endDay, and reportDay (YYYY-MM-DD)\n";
+  help += "DATE OPTION 1 (generate report for single day):\n";
+  help += "--endDay         day to generate report for (YYYY-MM-DD)\n";
+  help += "DATE OPTION 2 (generate reports for multiple days):\n";
+  help += "--startDay    start of date range to generate reports for (YYYY-MM-DD)\n";
+  help += "--endDay      end of date range to generate reports for (YYYY-MM-DD)\n";
+  help += "DATE OPTION 3 (generate report with specific start and end days):\n";
   help += "--startDay    start of query range (YYYY-MM-DD)\n";
   help += "--endDay      end of query range (YYYY-MM-DD)\n";
   help += "--reportDay   day of report listing (YYYY-MM-DD)\n";
@@ -38,12 +45,11 @@ if (argv.help || argv.h || Object.keys(argv).length === 1) {
   if (!argv.config) throw new Error("specify config file");
   if (!argv.public) throw new Error("specify public metric directory");
   if (!argv.cache) throw new Error("specify temporary data cache");
-  if (!argv.startDay && !argv.day)
-    throw new Error("specify start of query range (YYYY-MM-DD)");
-  if (!argv.endDay && !argv.day)
-    throw new Error("specify end of query range (YYYY-MM-DD)");
-  if (!argv.reportDay && !argv.day)
-    throw new Error("specify day of report listing (YYYY-MM-DD)");
+
+  if (!argv.startDay && argv.endDay && !argv.reportDay) dateOption = 1;
+  else if (argv.startDay && argv.endDay && !argv.reportDay) dateOption = 2;
+  else if (argv.startDay && argv.endDay && argv.reportDay) dateOption = 3;
+  if (!dateOption) throw new Error("Please use one of the options for dates from running 'mobility-metrics --help'");
 }
 
 const config = require(path.resolve(argv.config));
@@ -99,11 +105,8 @@ if (!config.summary)
 const publicPath = path.resolve(argv.public);
 const cachePath = path.resolve(argv.cache);
 
-const startDay = moment(argv.startDay || argv.day, "YYYY-MM-DD");
-const endDay = moment(argv.endDay || argv.day, "YYYY-MM-DD");
-const reportDay = moment(argv.reportDay || argv.day, "YYYY-MM-DD");
-
-const backfill = async function() {
+const backfill = async function (startDay, endDay, reportDay) {
+  console.log("backfilling", startDay, endDay, reportDay);
   return new Promise(async (resolve, reject) => {
     const envelope = turf.bboxPolygon(config.boundary).geometry;
 
@@ -130,12 +133,39 @@ const backfill = async function() {
   });
 };
 
-backfill()
-  .then(() => {
-    rimraf.sync(cachePath);
+console.log("DATE OPTION: " + dateOption);
+const dateArray = []; // [startDay, endDay, reportDay]
+switch (dateOption) {
+  case 1:
+    console.log("Generating report for single day: " + argv.endDay);
+    const day = moment(argv.endDay);
+    dateArray.push([day, day, day]);
+    // dateArray[0] = [argv.endDay, argv.endDay, argv.endDay].map(d => moment(d, "YYYY-MM-DD"));
+    break;
+  case 2:
+    console.log("Generating reports for multiple days: " + argv.startDay + " to " + argv.endDay);
+    const start = moment(argv.startDay, "YYYY-MM-DD");
+    const end = moment(argv.endDay, "YYYY-MM-DD");
+    // loop through days
+    for (let m = moment(start); m.isSameOrBefore(end); m.add(1, "days")) {
+      dateArray.push([m, m, m]);
+    }
+    break;
+  case 3:
+    console.log("Generating report with specific start and end days: " + argv.startDay + " to " + argv.endDay + " with report day: " + argv.reportDay);
+    dateArray.push([argv.startDay, argv.endDay, argv.reportDay].map(d => moment(d, "YYYY-MM-DD")));
+    break;
+}
+console.log(dateArray);
 
-    console.log("\ncompleted backfill");
-  })
-  .catch(err => {
-    console.error(err.message);
-  });
+dateArray.forEach((dates) => {
+  backfill(...dates)
+    .then(() => {
+      rimraf.sync(cachePath);
+
+      console.log("\ncompleted backfill");
+    })
+    .catch(err => {
+      console.error(err.message);
+    });
+});
