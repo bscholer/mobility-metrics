@@ -2,7 +2,8 @@
 FROM node:11.15.0-alpine
 
 # install python and make
-RUN apk add g++ make python bash
+RUN apk add g++ make python bash libc6-compat
+RUN ln -s /lib/libc.musl-x86_64.so.1 /lib/ld-linux-x86-64.so.2
 
 # change working directory
 WORKDIR /app
