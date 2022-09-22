@@ -138,9 +138,7 @@ const dateArray = []; // [startDay, endDay, reportDay]
 switch (dateOption) {
   case 1:
     console.log("Generating report for single day: " + argv.endDay);
-    const day = moment(argv.endDay);
-    dateArray.push([day, day, day]);
-    // dateArray[0] = [argv.endDay, argv.endDay, argv.endDay].map(d => moment(d, "YYYY-MM-DD"));
+    dateArray.push([moment(argv.endDay), moment(argv.endDay), moment(argv.endDay)]);
     break;
   case 2:
     console.log("Generating reports for multiple days: " + argv.startDay + " to " + argv.endDay);

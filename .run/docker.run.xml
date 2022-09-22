@@ -10,11 +10,11 @@
           <list>
             <DockerVolumeBindingImpl>
               <option name="containerPath" value="/data" />
-              <option name="hostPath" value="C:\Users\bscholer\Documents\Projects\mobility-metrics\data" />
+              <option name="hostPath" value="\\wsl$\Ubuntu\data\mobility-metrics\data" />
             </DockerVolumeBindingImpl>
             <DockerVolumeBindingImpl>
               <option name="containerPath" value="/root/.shst" />
-              <option name="hostPath" value="C:\Users\bscholer\Documents\Projects\mobility-metrics\shst-cache" />
+              <option name="hostPath" value="\\wsl$\Ubuntu\data\mobility-metrics\shst-cache\" />
             </DockerVolumeBindingImpl>
           </list>
         </option>
