@@ -26,6 +26,7 @@ async function cacheFromMds(
   }
   console.log("Sending requests for", hours.length, "hours")
 
+  let mdsCsv = 'id,geom\n'
   await Promise.all(hours.map((hour) => {
     return new Promise(async (resolve, reject) => {
 
@@ -50,28 +51,42 @@ async function cacheFromMds(
           throw new Error(`Malformed response, expected to find data.data.${endpoint}`);
         }
 
+        if (endpoint === "trips") {
+          data.data.trips.forEach((trip) => {
+            trip.route.features.forEach((feature, idx) => {
+              const id = `${trip.trip_id}-${idx.toString().padStart(4, '0')}`;
+              // console.log(id);
+              mdsCsv += `${id},POINT(${feature.geometry.coordinates.join(" ")})\n`
+            })
+          });
+        }
+
         if (DEBUG) {
           console.log(hour, ": Got", data.data[endpoint].length, endpoint === "trips" ? "trips" : "status changes");
           const timerLabel = `${hour} - ${endpoint} - match - ${data.data[endpoint].length}`;
           console.time(timerLabel);
         }
 
-        for (const tripOrEvent of data.data[endpoint]) {
-          const match = await matchFunc(tripOrEvent, config, graph);
-          if (match) {
-            const signature = crypto
-              .createHmac("sha256", version)
-              .update(JSON.stringify(match))
-              .digest("hex");
-            fs.appendFileSync(cacheDayProviderLogPath, signature + "\n");
-            stream.write(JSON.stringify(match) + "\n");
-          }
-        }
+        // for (const tripOrEvent of data.data[endpoint]) {
+        //
+        //   const match = await matchFunc(tripOrEvent, config, graph);
+        //   if (match) {
+        //     const signature = crypto
+        //       .createHmac("sha256", version)
+        //       .update(JSON.stringify(match))
+        //       .digest("hex");
+        //     fs.appendFileSync(cacheDayProviderLogPath, signature + "\n");
+        //     stream.write(JSON.stringify(match) + "\n");
+        //   }
+        // }
         if (DEBUG) console.timeEnd(timerLabel);
         resolve();
       })
     });
-  }));
+  })).then(() => {
+    console.log(`writing ${mdsCsv.split("\n").length} rows to ${endpoint}.csv`);
+    fs.writeFileSync(`/data/mds-${endpoint}.csv`, mdsCsv);
+  });
 }
 
 module.exports.cacheFromMds = cacheFromMds;

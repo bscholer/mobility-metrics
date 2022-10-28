@@ -159,7 +159,7 @@ console.log(dateArray);
 dateArray.forEach((dates) => {
   backfill(...dates)
     .then(() => {
-      rimraf.sync(cachePath);
+      // rimraf.sync(cachePath);
 
       console.log("\ncompleted backfill");
     })
