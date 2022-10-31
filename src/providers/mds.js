@@ -41,9 +41,18 @@ async function cacheFromMds(
         if (err) {
           console.error(err);
           throw err;
+          return;
         }
 
-        const data = JSON.parse(body);
+        let data;
+        try {
+          data = JSON.parse(body);
+        } catch (e) {
+          console.error(e);
+          console.log(body);
+          await fs.appendFileSync('/data/log.txt', `${new Date().toISOString()} ${provider.name} ${endpoint} ${hour} ${e}`);
+          reject(e);
+        }
 
         if (!('data' in data && endpoint in data.data)) {
           console.log(body);
@@ -57,6 +66,7 @@ async function cacheFromMds(
         }
 
         for (const tripOrEvent of data.data[endpoint]) {
+          if ('route' in tripOrEvent && tripOrEvent.route.features.length < 2) continue;
           const match = await matchFunc(tripOrEvent, config, graph);
           if (match) {
             const signature = crypto

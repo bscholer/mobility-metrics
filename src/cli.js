@@ -105,18 +105,10 @@ if (!config.summary)
 const publicPath = path.resolve(argv.public);
 const cachePath = path.resolve(argv.cache);
 
-const backfill = async function (startDay, endDay, reportDay) {
-  console.log("backfilling", startDay, endDay, reportDay);
-  return new Promise(async (resolve, reject) => {
-    const envelope = turf.bboxPolygon(config.boundary).geometry;
 
-    // get graph
-    const graphOpts = {
-      source: "osm/planet-181224",
-      tileHierarchy: 6
-    };
-    var graph = new shst.Graph(envelope, graphOpts);
-    await graph.buildGraph();
+const backfill = async function (startDay, endDay, reportDay) {
+  console.log("backfilling from", startDay.toISOString(), 'to', endDay.toISOString());
+  return new Promise(async (resolve, reject) => {
 
     await summarize(
       startDay,
@@ -129,6 +121,7 @@ const backfill = async function (startDay, endDay, reportDay) {
       config
     );
 
+    console.log("\ncompleted backfill");
     resolve();
   });
 };
@@ -146,7 +139,7 @@ switch (dateOption) {
     const end = moment(argv.endDay, "YYYY-MM-DD");
     // loop through days
     for (let m = moment(start); m.isSameOrBefore(end); m.add(1, "days")) {
-      dateArray.push([m, m, m]);
+      dateArray.push([m.clone(), m.clone(), m.clone()]);
     }
     break;
   case 3:
@@ -154,16 +147,21 @@ switch (dateOption) {
     dateArray.push([argv.startDay, argv.endDay, argv.reportDay].map(d => moment(d, "YYYY-MM-DD")));
     break;
 }
-console.log(dateArray);
 
-dateArray.forEach((dates) => {
-  backfill(...dates)
-    .then(() => {
-      rimraf.sync(cachePath);
+const envelope = turf.bboxPolygon(config.boundary).geometry;
 
-      console.log("\ncompleted backfill");
-    })
-    .catch(err => {
-      console.error(err.message);
+// get graph
+const graphOpts = {
+  source: "osm/planet-181224",
+  tileHierarchy: 6
+};
+var graph = new shst.Graph(envelope, graphOpts);
+graph.buildGraph()
+  .then(async () => {
+// run it
+    dateArray.reduce((p, dates) => p.then(() => backfill(...dates)), Promise.resolve()).then(() => {
     });
-});
+    rimraf(cachePath, () => {
+    });
+  });
+

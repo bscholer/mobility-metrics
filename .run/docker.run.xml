@@ -4,7 +4,7 @@
       <settings>
         <option name="imageTag" value="bscholer/mobility-metrics" />
         <option name="containerName" value="mobility-metrics" />
-        <option name="commandLineOptions" value="--memory=4g --cpus=6" />
+        <option name="commandLineOptions" value="--memory=8g --cpus=10" />
         <option name="sourceFilePath" value="Dockerfile" />
         <option name="volumeBindings">
           <list>

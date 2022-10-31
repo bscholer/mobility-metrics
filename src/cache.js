@@ -82,7 +82,9 @@ const cache = async function (
         cacheDayProviderLogPath,
         version,
         "trips"
-      );
+      ).catch((err) => {
+        console.error(err);
+      });
       await mds.cacheFromMds(
         provider,
         cacheDayProviderChangesStream,
@@ -93,7 +95,9 @@ const cache = async function (
         cacheDayProviderLogPath,
         version,
         "status_changes"
-      );
+      ).catch(err => {
+        console.error(err);
+      });
     } else if (provider.type === "local") {
       await local.trips(
         provider,
