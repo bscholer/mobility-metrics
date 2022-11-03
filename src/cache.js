@@ -12,7 +12,6 @@ const cache = async function (
   endDay,
   reportDay,
   cachePath,
-  graph,
   config
 ) {
   var version = JSON.parse(
@@ -77,7 +76,6 @@ const cache = async function (
         cacheDayProviderTripsStream,
         start,
         stop,
-        graph,
         config,
         cacheDayProviderLogPath,
         version,
@@ -90,7 +88,6 @@ const cache = async function (
         cacheDayProviderChangesStream,
         start,
         stop,
-        graph,
         config,
         cacheDayProviderLogPath,
         version,
@@ -104,7 +101,6 @@ const cache = async function (
         cacheDayProviderTripsStream,
         start,
         stop,
-        graph,
         config,
         cacheDayProviderLogPath,
         version
@@ -114,7 +110,6 @@ const cache = async function (
         cacheDayProviderChangesStream,
         start,
         stop,
-        graph,
         config,
         cacheDayProviderLogPath,
         version

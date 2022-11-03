@@ -1,8 +1,8 @@
 const fs = require("fs");
-const request = require("request");
 const tripMatch = require("../matchers/trip");
 const changeMatch = require("../matchers/change");
 const crypto = require("crypto");
+const axios = require("axios");
 
 const DEBUG = false;
 
@@ -11,7 +11,6 @@ async function cacheFromMds(
   stream,
   start,
   stop,
-  graph,
   config,
   cacheDayProviderLogPath,
   version,
@@ -38,64 +37,70 @@ async function cacheFromMds(
           "Authorization": provider.token,
         }
       };
-      await request.get(opts, async (err, res, body) => {
-        if (err) {
-          console.error(err);
-          throw err;
-          return;
-        }
+      let res;
+      try {
+        res = await axios.get(opts.url, opts)
+      } catch (err) {
+        console.error(err);
+        throw err;
+        return;
 
-        let data;
-        try {
-          data = JSON.parse(body);
-        } catch (e) {
-          console.error(e);
-          console.log(body);
-          await fs.appendFileSync('/data/log.txt', `${new Date().toISOString()} ${provider.name} ${endpoint} ${hour} ${e}`);
-          reject(e);
-        }
+      }
+      // await request.get(opts, async (err, res, body) => {
+      //   if (err) {
+      //   }
 
-        if (!('data' in data && endpoint in data.data)) {
-          console.log(body);
-          throw new Error(`Malformed response, expected to find data.data.${endpoint}`);
-        }
+      let { data } = res;
+      // try {
+      //   data = JSON.parse(body);
+      // } catch (e) {
+      //   console.error(e);
+      //   console.log(body);
+      //   await fs.appendFileSync('/data/log.txt', `${new Date().toISOString()} ${provider.name} ${endpoint} ${hour} ${e}`);
+      //   reject(e);
+      // }
 
-        if (endpoint === "trips") {
-          data.data.trips.forEach((trip) => {
-            trip.route.features.forEach((feature, idx) => {
-              const id = `${trip.trip_id}-${idx.toString().padStart(4, '0')}`;
-              // console.log(id);
-              mdsCsv += `${id},POINT(${feature.geometry.coordinates.join(" ")})\n`
-            })
-          });
-        }
+      if (!('data' in data && endpoint in data.data)) {
+        console.log(body);
+        throw new Error(`Malformed response, expected to find data.data.${endpoint}`);
+      }
 
-        if (DEBUG) {
-          console.log(hour, ": Got", data.data[endpoint].length, endpoint === "trips" ? "trips" : "status changes");
-          const timerLabel = `${hour} - ${endpoint} - match - ${data.data[endpoint].length}`;
-          console.time(timerLabel);
-        }
+      if (endpoint === "trips") {
+        data.data.trips.forEach((trip) => {
+          trip.route.features.forEach((feature, idx) => {
+            const id = `${trip.trip_id}-${idx.toString().padStart(4, '0')}`;
+            // console.log(id);
+            mdsCsv += `${id},POINT(${feature.geometry.coordinates.join(" ")})\n`
+          })
+        });
+      }
 
-        // for (const tripOrEvent of data.data[endpoint]) {
-        //
-        //   const match = await matchFunc(tripOrEvent, config, graph);
-        //   if (match) {
-        //     const signature = crypto
-        //       .createHmac("sha256", version)
-        //       .update(JSON.stringify(match))
-        //       .digest("hex");
-        //     fs.appendFileSync(cacheDayProviderLogPath, signature + "\n");
-        //     stream.write(JSON.stringify(match) + "\n");
-        //   }
-        // }
-        if (DEBUG) console.timeEnd(timerLabel);
-        resolve();
-      })
+      if (DEBUG) {
+        console.log(hour, ": Got", data.data[endpoint].length, endpoint === "trips" ? "trips" : "status changes");
+        const timerLabel = `${hour} - ${endpoint} - match - ${data.data[endpoint].length}`;
+        console.time(timerLabel);
+      }
+
+      for (const tripOrEvent of data.data[endpoint]) {
+        // stream.write(JSON.stringify(tripOrEvent) + "\n");
+        const match = await matchFunc(tripOrEvent, config);
+        if (match) {
+          const signature = crypto
+            .createHmac("sha256", version)
+            .update(JSON.stringify(match))
+            .digest("hex");
+          fs.appendFileSync(cacheDayProviderLogPath, signature + "\n");
+        }
+      }
+      if (DEBUG) console.timeEnd(timerLabel);
+      resolve();
+    })
+    // });
+  }))
+    .then(() => {
+      console.log(`writing ${mdsCsv.split("\n").length} rows to ${endpoint}.csv`);
+      fs.writeFileSync(`/data/mds-${endpoint}.csv`, mdsCsv);
     });
-  })).then(() => {
-    console.log(`writing ${mdsCsv.split("\n").length} rows to ${endpoint}.csv`);
-    fs.writeFileSync(`/data/mds-${endpoint}.csv`, mdsCsv);
-  });
 }
 
 module.exports.cacheFromMds = cacheFromMds;

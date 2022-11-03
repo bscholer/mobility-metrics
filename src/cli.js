@@ -1,10 +1,9 @@
-#!/usr/local/bin/node
+#!/usr/bin/env node
 
 const path = require("path");
 const fs = require("fs");
 const moment = require("moment");
 const rimraf = require("rimraf");
-const shst = require("sharedstreets");
 const turf = require("@turf/turf");
 const summarize = require("./summarize");
 const cover = require("@mapbox/tile-cover");
@@ -114,8 +113,6 @@ const backfill = async function (startDay, endDay, reportDay) {
       startDay,
       endDay,
       reportDay,
-      shst,
-      graph,
       publicPath,
       cachePath,
       config
@@ -148,20 +145,9 @@ switch (dateOption) {
     break;
 }
 
-const envelope = turf.bboxPolygon(config.boundary).geometry;
-
-// get graph
-const graphOpts = {
-  source: "osm/planet-181224",
-  tileHierarchy: 6
-};
-var graph = new shst.Graph(envelope, graphOpts);
-graph.buildGraph()
-  .then(async () => {
 // run it
-    dateArray.reduce((p, dates) => p.then(() => backfill(...dates)), Promise.resolve()).then(() => {
-    });
-    rimraf(cachePath, () => {
-    });
-  });
+dateArray.reduce((p, dates) => p.then(() => backfill(...dates)), Promise.resolve()).then(() => {
+});
+rimraf(cachePath, () => {
+});
 

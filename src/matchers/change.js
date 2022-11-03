@@ -24,7 +24,26 @@ module.exports = async function(change, config, graph) {
 
     // STREETS
     if (!change.matches) change.matches = {};
-    const matches = await graph.matchPoint(change.event_location, null, 1);
+    const wkt = `POINT(${change.event_location.geometry.coordinates.join(" ")})`;
+    const res = await axios.post(
+      `http://conflator/match_point`,
+      { point: wkt },
+      {
+        headers: { "Content-Type": "application/json" }
+      });
+    res.data.geometry = JSON.parse(res.data.geometry);
+    const match = {
+      segments: res.data.roadsegid.map(id => ({ geometryId: id, referenceId: id })),
+      matchedPath: {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: res.data.geometry.coordinates
+        }
+      }
+    }
+    // const matches = await graph.matchPoint(change.event_location, null, 1);
 
     if (matches.length) {
       change.matches.streets = matches;

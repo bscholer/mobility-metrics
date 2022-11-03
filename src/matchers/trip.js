@@ -1,11 +1,13 @@
 const turf = require("@turf/turf");
 const h3 = require("h3-js");
 const cover = require("@mapbox/tile-cover");
+const request = require("request");
+const axios = require("axios");
 
 const z = 19;
 const zs = { min_zoom: z, max_zoom: z };
 
-module.exports = async function(trip, config, graph) {
+module.exports = async function (trip, config) {
   if (config.vehicleFilter && config.vehicleFilter !== trip.vehicle_type) {
     return;
   }
@@ -41,7 +43,31 @@ module.exports = async function(trip, config, graph) {
 
   if (!trip.matches) trip.matches = {};
 
-  const match = await graph.matchTrace(line);
+  console.log(`number of points: ${trip.route.features.length}`);
+  // make wkt from line
+  const wkt = `LINESTRING(${line.geometry.coordinates.map(pt => pt.join(" ")).join(", ")})`;
+
+  let res = await axios.post(`http://conflator/match_line`, { line: wkt },
+    {
+      headers: { "Content-Type": "application/json" }
+    })
+  res.data.geometry = JSON.parse(res.data.geometry);
+  const match = {
+    segments: res.data.roadsegid.map((id) => ({ geometryId: id, referenceId: id })),
+    matchedPath: {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiLineString",
+        coordinates: [
+          res.data.roadsegid.map((id) => {
+            return res.data.geometry.features.find((f) => f.properties.ROADSEGID === id).geometry.coordinates;
+          })
+        ]
+      }
+    }
+  }
+  // const match = await graph.matchTrace(line);
 
   if (
     match &&

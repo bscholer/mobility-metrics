@@ -1,0 +1,18 @@
+services:
+  mobility-metrics:
+    image: mobility-metrics
+    build: .
+    stdin_open: true
+    links:
+      - conflator:conflator
+#    ports:
+#      - "5000:5000"
+    volumes:
+      - C:\Users\bscholer\Documents\Projects\mobility-metrics\data:/data
+
+  conflator:
+    image: mobility-metrics-conflator
+    build: ../mobility-metrics-conflator/
+    volumes:
+      - C:\Users\bscholer\Documents\Projects\mobility-metrics-conflator\data:/data
+      - C:\Users\bscholer\Documents\Projects\mobility-metrics-conflator\cache:/cache

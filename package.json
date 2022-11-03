@@ -1,27 +1,6 @@
 {
-  "_from": "mobility-metrics",
-  "_id": "mobility-metrics@4.6.1",
-  "_inBundle": false,
-  "_integrity": "sha512-zA7IQrfTrl7L45Sy1kX1K9+RAN8xE0Zh3hz0U2SyjgvrBig/0a7kQwxMOJSq5MpEBbIkiUbqkk5RJvplpVopyg==",
-  "_location": "/mobility-metrics",
-  "_phantomChildren": {},
-  "_requested": {
-    "type": "tag",
-    "registry": true,
-    "raw": "mobility-metrics",
-    "name": "mobility-metrics",
-    "escapedName": "mobility-metrics",
-    "rawSpec": "",
-    "saveSpec": null,
-    "fetchSpec": "latest"
-  },
-  "_requiredBy": [
-    "#USER"
-  ],
-  "_resolved": "https://registry.npmjs.org/mobility-metrics/-/mobility-metrics-4.6.1.tgz",
-  "_shasum": "3ae6e41d1cee3f6a3fb9bb7a87c225c4e1acf321",
-  "_spec": "mobility-metrics",
-  "_where": "/",
+  "name": "mobility-metrics",
+  "version": "4.6.1",
   "bin": {
     "mobility-metrics": "src/cli.js"
   },
@@ -33,15 +12,12 @@
     "byline": "^5.0.0",
     "d3-queue": "^3.0.7",
     "h3-js": "^3.4.2",
-    "level": "^4.0.0",
-    "level-mem": "^3.0.1",
     "md5": "^2.2.1",
     "mkdirp": "^0.5.1",
     "moment": "^2.24.0",
     "recursive-copy": "^2.0.10",
-    "request": "^2.88.0",
+    "axios": "^1.1.3",
     "rimraf": "^2.6.3",
-    "sharedstreets": "^0.13.7",
     "through2": "^3.0.1",
     "untildify": "^3.0.3"
   },
@@ -53,12 +29,10 @@
     "tape": "^4.11.0"
   },
   "engines": {
-    "node": ">=11.0.0"
+    "node": ">=16"
   },
-  "name": "mobility-metrics",
   "scripts": {
     "lint": "prettier config.template.json example/example.json '{,!(node_modules)/**/}*.js' templates/*.html --write",
     "test": "npm run lint; tap -R spec test/*.test.js"
-  },
-  "version": "4.6.1"
+  }
 }

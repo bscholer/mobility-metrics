@@ -7,17 +7,16 @@ const h3 = require("h3-js");
 const md5 = require("md5");
 const cache = require("./cache");
 const report = require("./report");
+const os = require("os");
 
 const version = require(path.join(__dirname, "../package.json")).version;
 
 var Z = 9;
 
-const summarize = async function(
+const summarize = async function (
   startDay,
   endDay,
   reportDay,
-  shst,
-  graph,
   publicPath,
   cachePath,
   config
@@ -34,8 +33,33 @@ const summarize = async function(
     var cacheDayPath = path.join(cachePath, reportDay.format("YYYY-MM-DD"));
     if (!fs.existsSync(cacheDayPath)) {
       console.log("  caching...");
-      await cache(startDay, endDay, reportDay, cachePath, graph, config);
+      await cache(startDay, endDay, reportDay, cachePath, config);
     }
+
+    // console.log("  linear referencing...");
+    // for (let provider of providers) {
+    //   await new Promise(async (resolve, reject) => {
+    //     var cacheProviderPath = path.join(cacheDayPath, provider);
+    //     const { spawn } = require('child_process');
+    //     const tripsProc = spawn('python3', ['/app/conflator/main.py', path.join(cacheProviderPath, "trips.json")]);
+    //     // const statusProc = spawn('python3', ['/app/conflator/main.py', path.join(cacheProviderPath, "changes.json")]);
+    //
+    //     tripsProc.stdout.on('data', (data) => {
+    //       console.log(`stdout: ${data}`);
+    //     });
+    //     tripsProc.stderr.on('data', (data) => {
+    //       console.log(`stderr: ${data}`);
+    //     });
+    //
+    //     tripsProc.on('close', (code) => {
+    //       console.log(`child process exited with code ${code}`);
+    //       // statusProc.on('close', (code) => {
+    //       resolve();
+    //       // });
+    //     });
+    //   });
+    // }
+
 
     console.log("  summarizing...");
     for (let provider of providers) {
@@ -63,6 +87,10 @@ const summarize = async function(
           return line.length;
         })
         .map(JSON.parse);
+
+      trips.reduce((min, curr) => {
+        return curr.route.features[0].properties.timestamp < min ? curr.route.features[0].properties.timestamp : min;
+      })
 
       var totalVehicles = new Set();
       var totalActiveVehicles = new Set();
@@ -231,17 +259,16 @@ const summarize = async function(
         reportDay,
         stats,
         trips,
-        graph,
         privacyMinimum
       );
       console.log("      availability...");
-      await availability(startDay, endDay, reportDay, stats, states, graph);
+      await availability(startDay, endDay, reportDay, stats, states);
       console.log("      onstreet...");
-      await onstreet(startDay, endDay, reportDay, stats, states, graph);
+      await onstreet(startDay, endDay, reportDay, stats, states);
       console.log("      pickups...");
-      await pickups(startDay, endDay, reportDay, stats, trips, graph);
+      await pickups(startDay, endDay, reportDay, stats, trips);
       console.log("      dropoffs...");
-      await dropoffs(startDay, endDay, reportDay, stats, trips, graph);
+      await dropoffs(startDay, endDay, reportDay, stats, trips);
       console.log("      flows...");
       flows(startDay, endDay, reportDay, stats, trips, privacyMinimum);
 
@@ -291,7 +318,6 @@ async function tripVolumes(
   reportDay,
   stats,
   trips,
-  graph,
   privacyMinimum
 ) {
   for (let trip of trips) {
@@ -592,7 +618,6 @@ async function pickups(
   reportDay,
   stats,
   trips,
-  graph,
   config
 ) {
   for (let trip of trips) {
@@ -685,43 +710,43 @@ async function pickups(
 
       // streets
 
-      var matches = await graph.matchPoint(trip.route.features[0], null, 1);
-      if (matches.length) {
-        var ref = matches[0].geometryId;
-        // cache geometry from ref
-        var geo = JSON.parse(
-          JSON.stringify(graph.tileIndex.featureIndex.get(ref))
-        );
-        geo.properties = {
-          ref: ref
-        };
-        stats.geometry.streets[ref] = geo;
-
-        // populate time bins
-        if (!stats.pickups.streets.day[timeBins.day]) {
-          stats.pickups.streets.day[timeBins.day] = {};
-        }
-        if (!stats.pickups.streets.hour[timeBins.hour]) {
-          stats.pickups.streets.hour[timeBins.hour] = {};
-        }
-        if (!stats.pickups.streets.minute[timeBins.minute]) {
-          stats.pickups.streets.minute[timeBins.minute] = {};
-        }
-        // populate streets
-        if (!stats.pickups.streets.day[timeBins.day][ref]) {
-          stats.pickups.streets.day[timeBins.day][ref] = 0;
-        }
-        if (!stats.pickups.streets.hour[timeBins.hour][ref]) {
-          stats.pickups.streets.hour[timeBins.hour][ref] = 0;
-        }
-        if (!stats.pickups.streets.minute[timeBins.minute][ref]) {
-          stats.pickups.streets.minute[timeBins.minute][ref] = 0;
-        }
-        // increment streets
-        stats.pickups.streets.day[timeBins.day][ref]++;
-        stats.pickups.streets.hour[timeBins.hour][ref]++;
-        stats.pickups.streets.minute[timeBins.minute][ref]++;
-      }
+      // var matches = await graph.matchPoint(trip.route.features[0], null, 1);
+      // if (matches.length) {
+      //   var ref = matches[0].geometryId;
+      //   // cache geometry from ref
+      //   var geo = JSON.parse(
+      //     JSON.stringify(graph.tileIndex.featureIndex.get(ref))
+      //   );
+      //   geo.properties = {
+      //     ref: ref
+      //   };
+      //   stats.geometry.streets[ref] = geo;
+      //
+      //   // populate time bins
+      //   if (!stats.pickups.streets.day[timeBins.day]) {
+      //     stats.pickups.streets.day[timeBins.day] = {};
+      //   }
+      //   if (!stats.pickups.streets.hour[timeBins.hour]) {
+      //     stats.pickups.streets.hour[timeBins.hour] = {};
+      //   }
+      //   if (!stats.pickups.streets.minute[timeBins.minute]) {
+      //     stats.pickups.streets.minute[timeBins.minute] = {};
+      //   }
+      //   // populate streets
+      //   if (!stats.pickups.streets.day[timeBins.day][ref]) {
+      //     stats.pickups.streets.day[timeBins.day][ref] = 0;
+      //   }
+      //   if (!stats.pickups.streets.hour[timeBins.hour][ref]) {
+      //     stats.pickups.streets.hour[timeBins.hour][ref] = 0;
+      //   }
+      //   if (!stats.pickups.streets.minute[timeBins.minute][ref]) {
+      //     stats.pickups.streets.minute[timeBins.minute][ref] = 0;
+      //   }
+      //   // increment streets
+      //   stats.pickups.streets.day[timeBins.day][ref]++;
+      //   stats.pickups.streets.hour[timeBins.hour][ref]++;
+      //   stats.pickups.streets.minute[timeBins.minute][ref]++;
+      // }
     }
   }
 }
@@ -732,7 +757,6 @@ async function dropoffs(
   reportDay,
   stats,
   trips,
-  graph,
   config
 ) {
   for (let trip of trips) {
@@ -824,47 +848,47 @@ async function dropoffs(
       });
 
       // sharedstreets aggregation
-      var matches = await graph.matchPoint(
-        trip.route.features[trip.route.features.length - 1],
-        null,
-        1
-      );
-      if (matches.length) {
-        var ref = matches[0].geometryId;
-        // cache geometry from ref
-        var geo = JSON.parse(
-          JSON.stringify(graph.tileIndex.featureIndex.get(ref))
-        );
-        geo.properties = {
-          ref: ref
-        };
-        stats.geometry.streets[ref] = geo;
-
-        // populate time bins
-        if (!stats.dropoffs.streets.day[timeBins.day]) {
-          stats.dropoffs.streets.day[timeBins.day] = {};
-        }
-        if (!stats.dropoffs.streets.hour[timeBins.hour]) {
-          stats.dropoffs.streets.hour[timeBins.hour] = {};
-        }
-        if (!stats.dropoffs.streets.minute[timeBins.minute]) {
-          stats.dropoffs.streets.minute[timeBins.minute] = {};
-        }
-        // populate streets
-        if (!stats.dropoffs.streets.day[timeBins.day][ref]) {
-          stats.dropoffs.streets.day[timeBins.day][ref] = 0;
-        }
-        if (!stats.dropoffs.streets.hour[timeBins.hour][ref]) {
-          stats.dropoffs.streets.hour[timeBins.hour][ref] = 0;
-        }
-        if (!stats.dropoffs.streets.minute[timeBins.minute][ref]) {
-          stats.dropoffs.streets.minute[timeBins.minute][ref] = 0;
-        }
-        // increment streets
-        stats.dropoffs.streets.day[timeBins.day][ref]++;
-        stats.dropoffs.streets.hour[timeBins.hour][ref]++;
-        stats.dropoffs.streets.minute[timeBins.minute][ref]++;
-      }
+      //   var matches = await graph.matchPoint(
+      //     trip.route.features[trip.route.features.length - 1],
+      //     null,
+      //     1
+      //   );
+      //   if (matches.length) {
+      //     var ref = matches[0].geometryId;
+      //     // cache geometry from ref
+      //     var geo = JSON.parse(
+      //       JSON.stringify(graph.tileIndex.featureIndex.get(ref))
+      //     );
+      //     geo.properties = {
+      //       ref: ref
+      //     };
+      //     stats.geometry.streets[ref] = geo;
+      //
+      //     // populate time bins
+      //     if (!stats.dropoffs.streets.day[timeBins.day]) {
+      //       stats.dropoffs.streets.day[timeBins.day] = {};
+      //     }
+      //     if (!stats.dropoffs.streets.hour[timeBins.hour]) {
+      //       stats.dropoffs.streets.hour[timeBins.hour] = {};
+      //     }
+      //     if (!stats.dropoffs.streets.minute[timeBins.minute]) {
+      //       stats.dropoffs.streets.minute[timeBins.minute] = {};
+      //     }
+      //     // populate streets
+      //     if (!stats.dropoffs.streets.day[timeBins.day][ref]) {
+      //       stats.dropoffs.streets.day[timeBins.day][ref] = 0;
+      //     }
+      //     if (!stats.dropoffs.streets.hour[timeBins.hour][ref]) {
+      //       stats.dropoffs.streets.hour[timeBins.hour][ref] = 0;
+      //     }
+      //     if (!stats.dropoffs.streets.minute[timeBins.minute][ref]) {
+      //       stats.dropoffs.streets.minute[timeBins.minute][ref] = 0;
+      //     }
+      //     // increment streets
+      //     stats.dropoffs.streets.day[timeBins.day][ref]++;
+      //     stats.dropoffs.streets.hour[timeBins.hour][ref]++;
+      //     stats.dropoffs.streets.minute[timeBins.minute][ref]++;
+      //   }
     }
   }
 }
@@ -1030,7 +1054,7 @@ async function fleet(startDay, endDay, reportDay, stats, states) {
   }
 }
 
-async function availability(startDay, endDay, reportDay, stats, states, graph) {
+async function availability(startDay, endDay, reportDay, stats, states) {
   // playback times
   // foreach 15 min:
   // foreach vehicle state:
@@ -1079,20 +1103,20 @@ async function availability(startDay, endDay, reportDay, stats, states, graph) {
         ) {
           stats.availability.bins.minute[
             current.format(baseDay + "-HH-mm")
-          ] = {};
+            ] = {};
         }
         if (
           !stats.availability.bins.minute[current.format(baseDay + "-HH-mm")][
             bin
-          ]
+            ]
         ) {
           stats.availability.bins.minute[current.format(baseDay + "-HH-mm")][
             bin
-          ] = 1;
+            ] = 1;
         } else {
           stats.availability.bins.minute[current.format(baseDay + "-HH-mm")][
             bin
-          ]++;
+            ]++;
         }
 
         var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
@@ -1107,61 +1131,61 @@ async function availability(startDay, endDay, reportDay, stats, states, graph) {
           ) {
             stats.availability.zones.minute[
               current.format(baseDay + "-HH-mm")
-            ] = {};
+              ] = {};
           }
           if (
             !stats.availability.zones.minute[
               current.format(baseDay + "-HH-mm")
-            ][lastAvailable.matches.zones[0]]
+              ][lastAvailable.matches.zones[0]]
           ) {
             stats.availability.zones.minute[current.format(baseDay + "-HH-mm")][
               lastAvailable.matches.zones[0]
-            ] = 1;
+              ] = 1;
           } else {
             stats.availability.zones.minute[current.format(baseDay + "-HH-mm")][
               lastAvailable.matches.zones[0]
-            ]++;
+              ]++;
           }
         }
 
         // availability street refs
-        var matches = lastAvailable.matches.streets;
-
-        if (matches && matches.length) {
-          var ref = matches[0].geometryId;
-          // cache geometry from ref
-          var geo = JSON.parse(
-            JSON.stringify(graph.tileIndex.featureIndex.get(ref))
-          );
-          geo.properties = {
-            ref: ref
-          };
-          stats.geometry.streets[ref] = geo;
-
-          // bootstrap ref
-          if (
-            !stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-            ]
-          ) {
-            stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-            ] = {};
-          }
-          if (
-            !stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-            ][ref]
-          ) {
-            stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-            ][ref] = 1;
-          } else {
-            stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-            ][ref]++;
-          }
-        }
+        // var matches = lastAvailable.matches.streets;
+        //
+        // if (matches && matches.length) {
+        //   var ref = matches[0].geometryId;
+        //   // cache geometry from ref
+        //   var geo = JSON.parse(
+        //     JSON.stringify(graph.tileIndex.featureIndex.get(ref))
+        //   );
+        //   geo.properties = {
+        //     ref: ref
+        //   };
+        //   stats.geometry.streets[ref] = geo;
+        //
+        //   // bootstrap ref
+        //   if (
+        //     !stats.availability.streets.minute[
+        //       current.format(baseDay + "-HH-mm")
+        //       ]
+        //   ) {
+        //     stats.availability.streets.minute[
+        //       current.format(baseDay + "-HH-mm")
+        //       ] = {};
+        //   }
+        //   if (
+        //     !stats.availability.streets.minute[
+        //       current.format(baseDay + "-HH-mm")
+        //       ][ref]
+        //   ) {
+        //     stats.availability.streets.minute[
+        //       current.format(baseDay + "-HH-mm")
+        //       ][ref] = 1;
+        //   } else {
+        //     stats.availability.streets.minute[
+        //       current.format(baseDay + "-HH-mm")
+        //       ][ref]++;
+        //   }
+        // }
       }
     }
 
@@ -1281,7 +1305,7 @@ async function availability(startDay, endDay, reportDay, stats, states, graph) {
   });
 }
 
-async function onstreet(startDay, endDay, reportDay, stats, states, graph) {
+async function onstreet(startDay, endDay, reportDay, stats, states) {
   // playback times
   // foreach 15 min:
   // foreach vehicle state:
@@ -1336,7 +1360,7 @@ async function onstreet(startDay, endDay, reportDay, stats, states, graph) {
         ) {
           stats.onstreet.bins.minute[current.format(baseDay + "-HH-mm")][
             bin
-          ] = 1;
+            ] = 1;
         } else {
           stats.onstreet.bins.minute[current.format(baseDay + "-HH-mm")][bin]++;
         }
@@ -1348,58 +1372,58 @@ async function onstreet(startDay, endDay, reportDay, stats, states, graph) {
           ) {
             stats.onstreet.zones.minute[
               current.format(baseDay + "-HH-mm")
-            ] = {};
+              ] = {};
           }
           if (
             !stats.onstreet.zones.minute[current.format(baseDay + "-HH-mm")][
               lastAvailable.matches.zones[0]
-            ]
+              ]
           ) {
             stats.onstreet.zones.minute[current.format(baseDay + "-HH-mm")][
               lastAvailable.matches.zones[0]
-            ] = 1;
+              ] = 1;
           } else {
             stats.onstreet.zones.minute[current.format(baseDay + "-HH-mm")][
               lastAvailable.matches.zones[0]
-            ]++;
+              ]++;
           }
         }
 
         // onstreet street refs
-        var matches = lastAvailable.matches.streets;
-        if (matches && matches.length) {
-          var ref = matches[0].geometryId;
-          // cache geometry from ref
-          var geo = JSON.parse(
-            JSON.stringify(graph.tileIndex.featureIndex.get(ref))
-          );
-          geo.properties = {
-            ref: ref
-          };
-          stats.geometry.streets[ref] = geo;
-
-          // bootstrap ref
-          if (
-            !stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")]
-          ) {
-            stats.onstreet.streets.minute[
-              current.format(baseDay + "-HH-mm")
-            ] = {};
-          }
-          if (
-            !stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
-              ref
-            ]
-          ) {
-            stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
-              ref
-            ] = 1;
-          } else {
-            stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
-              ref
-            ]++;
-          }
-        }
+        // var matches = lastAvailable.matches.streets;
+        // if (matches && matches.length) {
+        //   var ref = matches[0].geometryId;
+        //   // cache geometry from ref
+        //   var geo = JSON.parse(
+        //     JSON.stringify(graph.tileIndex.featureIndex.get(ref))
+        //   );
+        //   geo.properties = {
+        //     ref: ref
+        //   };
+        //   stats.geometry.streets[ref] = geo;
+        //
+        //   // bootstrap ref
+        //   if (
+        //     !stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")]
+        //   ) {
+        //     stats.onstreet.streets.minute[
+        //       current.format(baseDay + "-HH-mm")
+        //       ] = {};
+        //   }
+        //   if (
+        //     !stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
+        //       ref
+        //       ]
+        //   ) {
+        //     stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
+        //       ref
+        //       ] = 1;
+        //   } else {
+        //     stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
+        //       ref
+        //       ]++;
+        //   }
+        // }
       }
     }
 
