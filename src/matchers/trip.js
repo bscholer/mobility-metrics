@@ -1,8 +1,7 @@
+const axios = require("axios");
 const turf = require("@turf/turf");
 const h3 = require("h3-js");
 const cover = require("@mapbox/tile-cover");
-const request = require("request");
-const axios = require("axios");
 
 const z = 19;
 const zs = { min_zoom: z, max_zoom: z };
@@ -43,7 +42,7 @@ module.exports = async function (trip, config) {
 
   if (!trip.matches) trip.matches = {};
 
-  console.log(`number of points: ${trip.route.features.length}`);
+  // console.log(`number of points: ${trip.route.features.length}`);
   // make wkt from line
   const wkt = `LINESTRING(${line.geometry.coordinates.map(pt => pt.join(" ")).join(", ")})`;
 
@@ -67,6 +66,7 @@ module.exports = async function (trip, config) {
       }
     }
   }
+  // console.log(match);
   // const match = await graph.matchTrace(line);
 
   if (

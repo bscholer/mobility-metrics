@@ -1,3 +1,4 @@
+const axios = require("axios");
 const turf = require("@turf/turf");
 const h3 = require("h3-js");
 const cover = require("@mapbox/tile-cover");
@@ -5,7 +6,7 @@ const cover = require("@mapbox/tile-cover");
 const z = 19;
 const zs = { min_zoom: z, max_zoom: z };
 
-module.exports = async function(change, config, graph) {
+module.exports = async function (change, config, graph) {
   if (!config.vehicleFilter || config.vehicleFilter === change.vehicle_type) {
     const keys = cover.indexes(
       turf.point(change.event_location.geometry.coordinates).geometry,

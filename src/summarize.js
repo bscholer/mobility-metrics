@@ -31,6 +31,7 @@ const summarize = async function (
     providers.push("All");
 
     var cacheDayPath = path.join(cachePath, reportDay.format("YYYY-MM-DD"));
+    console.log(cacheDayPath);
     if (!fs.existsSync(cacheDayPath)) {
       console.log("  caching...");
       await cache(startDay, endDay, reportDay, cachePath, config);
