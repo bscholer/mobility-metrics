@@ -428,8 +428,11 @@ async function tripVolumes(
         match.matchedPath.geometry.coordinates &&
         match.matchedPath.geometry.coordinates.length === match.segments.length
       ) {
+        console.log(match.segments.length);
         match.segments
           .map((segment, s) => {
+            console.log(segment);
+            console.log(JSON.stringify(match.matchedPath.geometry.coordinates[s]));
             return turf.lineString(match.matchedPath.geometry.coordinates[s], {
               ref: segment.geometryId
             });

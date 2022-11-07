@@ -34,20 +34,13 @@ module.exports = async function (change, config, graph) {
       });
     res.data.geometry = JSON.parse(res.data.geometry);
     const match = {
-      segments: res.data.roadsegid.map(id => ({ geometryId: id, referenceId: id })),
-      matchedPath: {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates: res.data.geometry.coordinates
-        }
-      }
+      geometryId: res.data.roadsegid,
+      referenceId: res.data.roadsegid,
     }
     // const matches = await graph.matchPoint(change.event_location, null, 1);
 
-    if (matches.length) {
-      change.matches.streets = matches;
+    if (match.length) {
+      change.matches.streets = match;
     }
 
     // BINS

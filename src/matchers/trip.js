@@ -58,15 +58,12 @@ module.exports = async function (trip, config) {
       properties: {},
       geometry: {
         type: "MultiLineString",
-        coordinates: [
-          res.data.roadsegid.map((id) => {
-            return res.data.geometry.features.find((f) => f.properties.ROADSEGID === id).geometry.coordinates;
-          })
-        ]
+        coordinates: res.data.roadsegid.map((id) => {
+          return res.data.geometry.features.find((f) => f.properties.ROADSEGID === id).geometry.coordinates;
+        })
       }
     }
   }
-  // console.log(match);
   // const match = await graph.matchTrace(line);
 
   if (

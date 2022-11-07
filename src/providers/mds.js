@@ -4,7 +4,7 @@ const changeMatch = require("../matchers/change");
 const crypto = require("crypto");
 const axios = require("axios");
 
-const DEBUG = false;
+const DEBUG = true;
 
 async function cacheFromMds(
   provider,
@@ -17,12 +17,14 @@ async function cacheFromMds(
   endpoint, // "status_changes" or "trips"
 ) {
   const matchFunc = endpoint === "trips" ? tripMatch : changeMatch;
-  const hours = [];
+  let hours = [];
   const ONE_HOUR = 60 * 60 * 1000;
   while (start < stop) {
     hours.push(new Date(start).toISOString().substring(0, 13))
     start += ONE_HOUR;
   }
+  // TODO REMOVE ME!!!!
+  hours = hours.slice(0, 1);
   console.log("Sending requests for", hours.length, "hours")
 
   let mdsCsv = 'id,geom\n'
@@ -75,13 +77,14 @@ async function cacheFromMds(
         });
       }
 
+      const timerLabel = `${hour} - ${endpoint} - match - ${data.data[endpoint].length}`;
       if (DEBUG) {
         console.log(hour, ": Got", data.data[endpoint].length, endpoint === "trips" ? "trips" : "status changes");
-        const timerLabel = `${hour} - ${endpoint} - match - ${data.data[endpoint].length}`;
         console.time(timerLabel);
       }
 
-      for (const tripOrEvent of data.data[endpoint]) {
+      await Promise.all(data.data[endpoint].map(async (tripOrEvent) => {
+      // for (const tripOrEvent of data.data[endpoint]) {
         // stream.write(JSON.stringify(tripOrEvent) + "\n");
         const match = await matchFunc(tripOrEvent, config);
         if (match) {
@@ -90,8 +93,9 @@ async function cacheFromMds(
             .update(JSON.stringify(match))
             .digest("hex");
           fs.appendFileSync(cacheDayProviderLogPath, signature + "\n");
+          stream.write(JSON.stringify(match) + "\n");
         }
-      }
+      }))
       if (DEBUG) console.timeEnd(timerLabel);
       resolve();
     })
