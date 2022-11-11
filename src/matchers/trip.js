@@ -60,12 +60,12 @@ module.exports = async function (trip, config) {
       geometry: {
         type: "MultiLineString",
         coordinates: res.data.streets.roadsegid.map((id) => {
-          return res.data.streets.geometry.features.find((f) => f.properties.ROADSEGID === id).geometry.coordinates;
+          return res.data.streets.geometry.features.find((f) => `${f.id}` === `${id}`).geometry.coordinates;
         })
       }
     }
   }
-  const zoneMatch = res.data.zones.zoneid
+  const zoneMatch = res.data.zone.zoneid
   if (zoneMatch) {
     trip.matches.zones = zoneMatch;
   }

@@ -1267,8 +1267,9 @@
           //   f.properties.value = 0;
           // });
           Object.keys(data.tripVolumes.zones[timeLevel][time]).forEach(zone => {
-            geojson["trip-volume"].features[zone].properties.value =
-              data.tripVolumes.zones[timeLevel][time][zone];
+            geojson["trip-volume"].features
+              .find(f => f.properties.id + "" === zone + "")
+              .properties.value = data.tripVolumes.zones[timeLevel][time][zone];
           });
           categorize(geojson["trip-volume"]);
           maps["trip-volume-map"]

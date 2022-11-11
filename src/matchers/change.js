@@ -42,8 +42,8 @@ module.exports = async function (change, config, graph) {
     //   referenceId: res.data.zones.zoneid,
     // }
     // if (zoneMatch) {
-    if (res.data.zones.zoneid)
-      change.matches.zones = res.data.zones.zoneid;
+    if (res.data.zone.zoneid)
+      change.matches.zones = res.data.zone.zoneid;
     // }
     // const matches = await graph.matchPoint(change.event_location, null, 1);
 

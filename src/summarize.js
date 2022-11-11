@@ -31,7 +31,6 @@ const summarize = async function (
     providers.push("All");
 
     var cacheDayPath = path.join(cachePath, reportDay.format("YYYY-MM-DD"));
-    console.log(cacheDayPath);
     if (!fs.existsSync(cacheDayPath)) {
       console.log("  caching...");
       await cache(startDay, endDay, reportDay, cachePath, config);
@@ -363,12 +362,9 @@ async function tripVolumes(
 
           // add to stats.geometry.zones
           // find zone geometry from config
-          console.log(config.zones.features.length);
-          console.log(zone);
           var zoneGeometry = config.zones.features.find(z => {
             return z.properties.id + "" === zone + "";
           })
-          console.log(zoneGeometry);
           if (zoneGeometry) {
             if (!stats.geometry.zones[zone]) {
               stats.geometry.zones[zone] = zoneGeometry;
