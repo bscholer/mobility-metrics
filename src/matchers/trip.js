@@ -50,20 +50,26 @@ module.exports = async function (trip, config) {
     {
       headers: { "Content-Type": "application/json" }
     })
-  res.data.geometry = JSON.parse(res.data.geometry);
+  // console.log(res.data);
+  res.data.streets.geometry = JSON.parse(res.data.streets.geometry);
   const match = {
-    segments: res.data.roadsegid.map((id) => ({ geometryId: id, referenceId: id })),
+    segments: res.data.streets.roadsegid.map((id) => ({ geometryId: id, referenceId: id })),
     matchedPath: {
       type: "Feature",
       properties: {},
       geometry: {
         type: "MultiLineString",
-        coordinates: res.data.roadsegid.map((id) => {
-          return res.data.geometry.features.find((f) => f.properties.ROADSEGID === id).geometry.coordinates;
+        coordinates: res.data.streets.roadsegid.map((id) => {
+          return res.data.streets.geometry.features.find((f) => f.properties.ROADSEGID === id).geometry.coordinates;
         })
       }
     }
   }
+  const zoneMatch = res.data.zones.zoneid
+  if (zoneMatch) {
+    trip.matches.zones = zoneMatch;
+  }
+
   // const match = await graph.matchTrace(line);
 
   if (
@@ -94,20 +100,29 @@ module.exports = async function (trip, config) {
   // ZONES
 
   if (config.zones) {
+
     // trace
     var zoneMatches = [];
 
     for (let zone of config.zones.features) {
-      let found = false;
-      for (let key of keys) {
-        if (zone.properties.keys[key]) found = true;
-        continue;
-      }
+      // trip.route.features.forEach(ping => {
+      //   if (turf.booleanPointInPolygon(ping, zone)) {
+      //     zoneMatches.push(zone.properties.id);
+      //   }
+      // })
+      // let found = false;
+      // for (let key of keys) {
+      //   if (zone.properties.keys[key]) found = true;
+      //   continue;
+      // }
 
-      if (found) {
-        zoneMatches.push(zone.properties.id);
-      }
+      // if (found) {
+      //   zoneMatches.push(zone.properties.id);
+      // }
     }
+
+    // remove dupes
+    // trip.matches.zones = zoneMatches.filter((v, i, a) => a.indexOf(v) === i);
 
     if (zoneMatches.length) {
       trip.matches.zones = zoneMatches;

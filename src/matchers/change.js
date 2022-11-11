@@ -23,7 +23,7 @@ module.exports = async function (change, config, graph) {
       if (!pass) return;
     }
 
-    // STREETS
+    // STREETS AND ZONES
     if (!change.matches) change.matches = {};
     const wkt = `POINT(${change.event_location.geometry.coordinates.join(" ")})`;
     const res = await axios.post(
@@ -32,11 +32,19 @@ module.exports = async function (change, config, graph) {
       {
         headers: { "Content-Type": "application/json" }
       });
-    res.data.geometry = JSON.parse(res.data.geometry);
+    res.data.streets.geometry = JSON.parse(res.data.streets.geometry);
     const match = {
-      geometryId: res.data.roadsegid,
-      referenceId: res.data.roadsegid,
+      geometryId: res.data.streets.roadsegid,
+      referenceId: res.data.streets.roadsegid,
     }
+    // const zoneMatch = {
+    //   geometryId: res.data.zones.zoneid,
+    //   referenceId: res.data.zones.zoneid,
+    // }
+    // if (zoneMatch) {
+    if (res.data.zones.zoneid)
+      change.matches.zones = res.data.zones.zoneid;
+    // }
     // const matches = await graph.matchPoint(change.event_location, null, 1);
 
     if (match.length) {
@@ -55,25 +63,25 @@ module.exports = async function (change, config, graph) {
 
     // ZONES
 
-    if (config.zones) {
-      var zoneMatches = [];
-
-      for (let zone of config.zones.features) {
-        let found = false;
-        for (let key of keys) {
-          if (zone.properties.keys[key]) found = true;
-          continue;
-        }
-
-        if (found) {
-          zoneMatches.push(zone.properties.id);
-        }
-      }
-
-      if (zoneMatches.length) {
-        change.matches.zones = zoneMatches;
-      }
-    }
+    // if (config.zones) {
+      // var zoneMatches = [];
+      //
+      // for (let zone of config.zones.features) {
+      //   let found = false;
+      //   for (let key of keys) {
+      //     if (zone.properties.keys[key]) found = true;
+      //     continue;
+      //   }
+      //
+      //   if (found) {
+      //     zoneMatches.push(zone.properties.id);
+      //   }
+      // }
+      //
+      // if (zoneMatches.length) {
+      //   change.matches.zones = zoneMatches;
+      // }
+    // }
 
     return change;
   }

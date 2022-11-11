@@ -105,6 +105,7 @@ const summarize = async function (
         geometry: {
           bins: {},
           streets: {},
+          zones: {},
           pairs: {}
         },
         fleet: {
@@ -206,9 +207,9 @@ const summarize = async function (
         }
       };
 
-      if (config.zones) {
-        stats.geometry.zones = config.zones;
-      }
+      // if (config.zones) {
+      //   stats.geometry.zones = config.zones;
+      // }
 
       for (let trip of trips) {
         totalVehicles.add(trip.vehicle_id);
@@ -260,7 +261,8 @@ const summarize = async function (
         reportDay,
         stats,
         trips,
-        privacyMinimum
+        privacyMinimum,
+        config
       );
       console.log("      availability...");
       await availability(startDay, endDay, reportDay, stats, states);
@@ -319,7 +321,8 @@ async function tripVolumes(
   reportDay,
   stats,
   trips,
-  privacyMinimum
+  privacyMinimum,
+  config
 ) {
   for (let trip of trips) {
     // check for time range
@@ -343,7 +346,7 @@ async function tripVolumes(
 
         // aggregate stats
         trip.matches.zones.forEach(zone => {
-          // populate hex bins
+          // populate zone bins
           if (!stats.tripVolumes.zones.day[timeBins.day][zone]) {
             stats.tripVolumes.zones.day[timeBins.day][zone] = 0;
           }
@@ -353,10 +356,24 @@ async function tripVolumes(
           if (!stats.tripVolumes.zones.minute[timeBins.minute][zone]) {
             stats.tripVolumes.zones.minute[timeBins.minute][zone] = 0;
           }
-          // increment hex bins
+          // increment counts
           stats.tripVolumes.zones.day[timeBins.day][zone]++;
           stats.tripVolumes.zones.hour[timeBins.hour][zone]++;
           stats.tripVolumes.zones.minute[timeBins.minute][zone]++;
+
+          // add to stats.geometry.zones
+          // find zone geometry from config
+          console.log(config.zones.features.length);
+          console.log(zone);
+          var zoneGeometry = config.zones.features.find(z => {
+            return z.properties.id + "" === zone + "";
+          })
+          console.log(zoneGeometry);
+          if (zoneGeometry) {
+            if (!stats.geometry.zones[zone]) {
+              stats.geometry.zones[zone] = zoneGeometry;
+            }
+          }
         });
       }
 
@@ -428,11 +445,8 @@ async function tripVolumes(
         match.matchedPath.geometry.coordinates &&
         match.matchedPath.geometry.coordinates.length === match.segments.length
       ) {
-        console.log(match.segments.length);
         match.segments
           .map((segment, s) => {
-            console.log(segment);
-            console.log(JSON.stringify(match.matchedPath.geometry.coordinates[s]));
             return turf.lineString(match.matchedPath.geometry.coordinates[s], {
               ref: segment.geometryId
             });

@@ -56,6 +56,18 @@ const config = require(path.resolve(argv.config));
 if (!config.zones) {
   config.zones = turf.FeatureCollection([]);
 }
+// it's a file path, with the base directory being the config file
+else if (typeof config.zones === 'string') {
+  console.log('loading zones from', config.zones);
+  config.zones = JSON.parse(fs.readFileSync(path.resolve(path.dirname(argv.config), config.zones)));
+  // replace the id field
+  if (config.zoneIdField) {
+    config.zones.features.forEach(f => {
+      f.properties.id = f.properties[config.zoneIdField];
+      delete f.properties[config.zoneIdField];
+    });
+  }
+}
 const z = 19;
 const zs = { min_zoom: z, max_zoom: z };
 for (let zone of config.zones.features) {
@@ -123,7 +135,7 @@ const backfill = async function (startDay, endDay, reportDay) {
   });
 };
 
-console.log("DATE OPTION: " + dateOption);
+// console.log("DATE OPTION: " + dateOption);
 const dateArray = []; // [startDay, endDay, reportDay]
 switch (dateOption) {
   case 1:
