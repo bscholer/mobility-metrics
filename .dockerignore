@@ -4,3 +4,6 @@ shst-cache
 .idea
 .git
 deploy-aci.yaml
+cache
+.run
+conflator
