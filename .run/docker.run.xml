@@ -24,6 +24,10 @@
               <option name="containerPath" value="/data" />
               <option name="hostPath" value="C:\Users\bscholer\Documents\Projects\mobility-metrics\data\" />
             </DockerVolumeBindingImpl>
+            <DockerVolumeBindingImpl>
+              <option name="containerPath" value="/cache" />
+              <option name="hostPath" value="C:\Users\bscholer\Documents\Projects\mobility-metrics\cache\" />
+            </DockerVolumeBindingImpl>
           </list>
         </option>
       </settings>

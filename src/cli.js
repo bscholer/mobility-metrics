@@ -118,6 +118,8 @@ const cachePath = path.resolve(argv.cache);
 
 
 const backfill = async function (startDay, endDay, reportDay) {
+  startDay = startDay.startOf("day");
+  endDay = endDay.endOf("day");
   console.log("backfilling from", startDay.toISOString(), 'to', endDay.toISOString());
   return new Promise(async (resolve, reject) => {
 
@@ -160,6 +162,6 @@ switch (dateOption) {
 // run it
 dateArray.reduce((p, dates) => p.then(() => backfill(...dates)), Promise.resolve()).then(() => {
 });
-rimraf(cachePath, () => {
-});
+// rimraf(cachePath, () => {
+// });
 

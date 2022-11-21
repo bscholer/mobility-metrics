@@ -1247,7 +1247,6 @@
         }
       }
       if ($("#trip-volume-zones").prop("checked")) {
-        debugger;
         if (data.tripVolumes.zones[timeLevel][time]) {
           Object.keys(data.tripVolumes.zones[timeLevel][time]).forEach(
             zone => {
@@ -1259,13 +1258,6 @@
               geojson["trip-volume"].features.push(feature);
             }
           );
-
-          // geojson["trip-volume"] = JSON.parse(
-          //   JSON.stringify(data.geometry.zones)
-          // );
-          // geojson["trip-volume"].features.forEach(f => {
-          //   f.properties.value = 0;
-          // });
           Object.keys(data.tripVolumes.zones[timeLevel][time]).forEach(zone => {
             geojson["trip-volume"].features
               .find(f => f.properties.id + "" === zone + "")
@@ -1311,26 +1303,29 @@
               geojson["availability"].features.push(feature);
             }
           );
-          categorize(geojson["availability"]);
+          categorize(geojson.availability);
           maps["availability-map"]
             .getSource("bins")
-            .setData(geojson["availability"]);
+            .setData(geojson.availability);
         }
       }
       if ($("#availability-zones").prop("checked")) {
         if (data.availability.zones[timeLevel][time]) {
-          geojson["availability"] = JSON.parse(
-            JSON.stringify(data.geometry.zones)
-          );
-          geojson["availability"].features.forEach(f => {
-            f.properties.value = 0;
-          });
           Object.keys(data.availability.zones[timeLevel][time]).forEach(
             zone => {
-              geojson["availability"].features[zone].properties.value =
+              var feature = JSON.parse(
+                JSON.stringify(data.geometry.zones[zone])
+              );
+              feature.properties.value =
                 data.availability.zones[timeLevel][time][zone];
+              geojson.availability.features.push(feature);
             }
           );
+          Object.keys(data.availability.zones[timeLevel][time]).forEach(zone => {
+            geojson.availability.features
+              .find(f => f.properties.id + "" === zone + "")
+              .properties.value = data.availability.zones[timeLevel][time][zone];
+          });
           categorize(geojson["availability"]);
           maps["availability-map"]
             .getSource("zones")
@@ -1377,22 +1372,37 @@
       }
       if ($("#onstreet-zones").prop("checked")) {
         if (data.onstreet.zones[timeLevel][time]) {
-          geojson["onstreet"] = JSON.parse(
-            JSON.stringify(data.geometry.zones)
-          );
-          geojson["onstreet"].features.forEach(f => {
-            f.properties.value = 0;
-          });
           Object.keys(data.onstreet.zones[timeLevel][time]).forEach(
             zone => {
-              geojson["onstreet"].features[zone].properties.value =
+              const feature = JSON.parse(
+                JSON.stringify(data.geometry.zones[zone])
+              );
+              feature.properties.value =
                 data.onstreet.zones[timeLevel][time][zone];
+              geojson.onstreet.features.push(feature);
             }
           );
-          categorize(geojson["onstreet"]);
+          Object.keys(data.onstreet.zones[timeLevel][time]).forEach(zone => {
+            geojson.onstreet.features
+              .find(f => f.properties.id + "" === zone + "")
+              .properties.value = data.onstreet.zones[timeLevel][time][zone];
+          });
+          //   geojson["onstreet"] = JSON.parse(
+          //     JSON.stringify(data.geometry.zones)
+          //   );
+          //   geojson["onstreet"].features.forEach(f => {
+          //     f.properties.value = 0;
+          //   });
+          //   Object.keys(data.onstreet.zones[timeLevel][time]).forEach(
+          //     zone => {
+          //       geojson["onstreet"].features[zone].properties.value =
+          //         data.onstreet.zones[timeLevel][time][zone];
+          //     }
+          //   );
+          categorize(geojson.onstreet);
           maps["onstreet-map"]
             .getSource("zones")
-            .setData(geojson["onstreet"]);
+            .setData(geojson.onstreet);
         }
       }
 

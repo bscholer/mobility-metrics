@@ -23,7 +23,7 @@ const cache = async function (
   });
 
   const start = Math.round(+startDay.subtract(config.lost, "days").format("x"));
-  const stop = Math.round(+endDay.format("x"));
+  const stop = Math.round(+endDay.endOf('day').format("x"));
 
   const cacheDayPath = path.join(cachePath, reportDay.format("YYYY-MM-DD"));
   const cacheDayAllPath = path.join(cacheDayPath, "./All");

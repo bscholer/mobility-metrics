@@ -33,10 +33,7 @@ module.exports = async function (change, config, graph) {
         headers: { "Content-Type": "application/json" }
       });
     res.data.streets.geometry = JSON.parse(res.data.streets.geometry);
-    const match = {
-      geometryId: res.data.streets.roadsegid,
-      referenceId: res.data.streets.roadsegid,
-    }
+    const match = res.data.streets.roadsegid;
     // const zoneMatch = {
     //   geometryId: res.data.zones.zoneid,
     //   referenceId: res.data.zones.zoneid,

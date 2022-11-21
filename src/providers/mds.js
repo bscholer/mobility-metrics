@@ -24,7 +24,7 @@ async function cacheFromMds(
     start += ONE_HOUR;
   }
   // TODO REMOVE ME!!!!
-  hours = hours.slice(0, 1);
+  // hours = hours.slice(0, 1);
   console.log("Sending requests for", hours.length, "hours")
 
   let mdsCsv = 'id,geom\n'

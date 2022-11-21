@@ -53,7 +53,7 @@ module.exports = async function (trip, config) {
   // console.log(res.data);
   res.data.streets.geometry = JSON.parse(res.data.streets.geometry);
   const match = {
-    segments: res.data.streets.roadsegid.map((id) => ({ geometryId: id, referenceId: id })),
+    segments: res.data.streets.roadsegid,
     matchedPath: {
       type: "Feature",
       properties: {},
@@ -63,14 +63,41 @@ module.exports = async function (trip, config) {
           return res.data.streets.geometry.features.find((f) => `${f.id}` === `${id}`).geometry.coordinates;
         })
       }
-    }
-  }
-  const zoneMatch = res.data.zone.zoneid
-  if (zoneMatch) {
-    trip.matches.zones = zoneMatch;
+    },
   }
 
-  // const match = await graph.matchTrace(line);
+  if (res.data.zone.zoneid) {
+    trip.matches.zones = res.data.zone.zoneid;
+  }
+
+  console.log(res.data.streets);
+  const pickupMatch = {
+    street: res.data.streets.pickup,
+    zone: res.data.zone.pickup,
+    bin: h3.geoToH3(
+      trip.route.features[0].geometry.coordinates[1],
+      trip.route.features[0].geometry.coordinates[0],
+      config.Z
+    )
+  }
+
+  const dropoffMatch = {
+    street: res.data.streets.dropoff,
+    zone: res.data.zone.dropoff,
+    bin: h3.geoToH3(
+      trip.route.features[trip.route.features.length - 1].geometry.coordinates[1],
+      trip.route.features[trip.route.features.length - 1].geometry.coordinates[0],
+      config.Z
+    )
+  }
+
+  if (pickupMatch.street || pickupMatch.zone || pickupMatch.bin) {
+    trip.matches.pickup = pickupMatch;
+  }
+
+  if (dropoffMatch.street || dropoffMatch.zone || dropoffMatch.bin) {
+    trip.matches.dropoff = dropoffMatch;
+  }
 
   if (
     match &&
@@ -85,87 +112,88 @@ module.exports = async function (trip, config) {
 
   // HEXES
 
-  var bins = {};
+  var bins = [];
   trip.route.features.forEach(ping => {
     var bin = h3.geoToH3(
       ping.geometry.coordinates[1],
       ping.geometry.coordinates[0],
       config.Z
     );
-    bins[bin] = 1;
+    bins.push(bin);
+    // bins[bin] = 1;
   });
 
   trip.matches.bins = bins;
 
   // ZONES
 
-  if (config.zones) {
+  // if (config.zones) {
 
-    // trace
-    var zoneMatches = [];
+  // trace
+  // var zoneMatches = [];
 
-    for (let zone of config.zones.features) {
-      // trip.route.features.forEach(ping => {
-      //   if (turf.booleanPointInPolygon(ping, zone)) {
-      //     zoneMatches.push(zone.properties.id);
-      //   }
-      // })
-      // let found = false;
-      // for (let key of keys) {
-      //   if (zone.properties.keys[key]) found = true;
-      //   continue;
-      // }
+  // for (let zone of config.zones.features) {
+  // trip.route.features.forEach(ping => {
+  //   if (turf.booleanPointInPolygon(ping, zone)) {
+  //     zoneMatches.push(zone.properties.id);
+  //   }
+  // })
+  // let found = false;
+  // for (let key of keys) {
+  //   if (zone.properties.keys[key]) found = true;
+  //   continue;
+  // }
 
-      // if (found) {
-      //   zoneMatches.push(zone.properties.id);
-      // }
-    }
+  // if (found) {
+  //   zoneMatches.push(zone.properties.id);
+  // }
+  // }
 
-    // remove dupes
-    // trip.matches.zones = zoneMatches.filter((v, i, a) => a.indexOf(v) === i);
+  // remove dupes
+  // trip.matches.zones = zoneMatches.filter((v, i, a) => a.indexOf(v) === i);
 
-    if (zoneMatches.length) {
-      trip.matches.zones = zoneMatches;
-    }
+  // if (zoneMatches.length) {
+  //   trip.matches.zones = zoneMatches;
+  // }
 
-    // pickup
-    var pickupZoneMatches = [];
-    const pickupKeys = cover.indexes(line.geometry, zs);
-    for (let zone of config.zones.features) {
-      let found = false;
-      for (let key of pickupKeys) {
-        if (zone.properties.keys[key]) found = true;
-        continue;
-      }
-
-      if (found) {
-        pickupZoneMatches.push(zone.properties.id);
-      }
-    }
-
-    if (pickupZoneMatches.length) {
-      trip.matches.pickupZones = pickupZoneMatches;
-    }
-
-    // dropoff
-    var dropoffZoneMatches = [];
-    const dropoffKeys = cover.indexes(line.geometry, zs);
-    for (let zone of config.zones.features) {
-      let found = false;
-      for (let key of dropoffKeys) {
-        if (zone.properties.keys[key]) found = true;
-        continue;
-      }
-
-      if (found) {
-        dropoffZoneMatches.push(zone.properties.id);
-      }
-    }
-
-    if (zoneMatches.length) {
-      trip.matches.dropoffZones = dropoffZoneMatches;
-    }
-  }
+  // pickup
+  // var pickupZoneMatches = [];
+  // const pickupKeys = cover.indexes(line.geometry, zs);
+  // for (let zone of config.zones.features) {
+  //   let found = false;
+  //   for (let key of pickupKeys) {
+  //     if (zone.properties.keys[key]) found = true;
+  //     continue;
+  //   }
+  //
+  //   if (found) {
+  //     pickupZoneMatches.push(zone.properties.id);
+  //   }
+  // }
+  //
+  // if (pickupZoneMatches.length) {
+  //   trip.matches.pickupZones = pickupZoneMatches;
+  // }
+  //
+  // // dropoff
+  // var dropoffZoneMatches = [];
+  // const dropoffKeys = cover.indexes(line.geometry, zs);
+  // for (let zone of config.zones.features) {
+  //   let found = false;
+  //   for (let key of dropoffKeys) {
+  //     if (zone.properties.keys[key]) found = true;
+  //     continue;
+  //   }
+  //
+  //   if (found) {
+  //     dropoffZoneMatches.push(zone.properties.id);
+  //   }
+  // }
+  //
+  // if (zoneMatches.length) {
+  //   trip.matches.dropoffZones = dropoffZoneMatches;
+  // }
+  // }
 
   return trip;
 };
