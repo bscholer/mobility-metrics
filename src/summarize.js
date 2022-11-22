@@ -301,6 +301,26 @@ const summarize = async function (
         states[id] = states[id].sort((a, b) => a.event_time - b.event_time);
       });
 
+      trips.map(trip => {
+        var bins = new Set();
+        trip.route.features.forEach(ping => {
+          var bin = h3.geoToH3(
+            ping.geometry.coordinates[1],
+            ping.geometry.coordinates[0],
+            Z
+          );
+          bins.add(bin);
+        });
+        trip.matches.bins = Array.from(bins);
+        // store bin geometry
+        bins.forEach(bin => {
+          var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
+            bin: bin
+          });
+          stats.geometry.bins[bin] = geo;
+        });
+      })
+
 
       // console.log("      fleet sizes...");
       // await fleet(startDay, endDay, reportDay, stats, states);
@@ -319,10 +339,10 @@ const summarize = async function (
       // await availability(startDay, endDay, reportDay, stats, states, config);
       // console.log("      onstreet...");
       // await onstreet(startDay, endDay, reportDay, stats, states, config);
-      // console.log("      pickups...");
-      // await pickups(startDay, endDay, reportDay, stats, trips, config);
-      // console.log("      dropoffs...");
-      // await dropoffs(startDay, endDay, reportDay, stats, trips, config);
+      console.log("      pickups...");
+      await pickups(startDay, endDay, reportDay, stats, trips, config);
+      console.log("      dropoffs...");
+      await dropoffs(startDay, endDay, reportDay, stats, trips, config);
       // console.log("      flows...");
       // flows(startDay, endDay, reportDay, stats, trips, privacyMinimum);
 
@@ -374,26 +394,6 @@ async function tripVolumes(
   trips,
   privacyMinimum,
 ) {
-  trips.map(trip => {
-    var bins = new Set();
-    trip.route.features.forEach(ping => {
-      var bin = h3.geoToH3(
-        ping.geometry.coordinates[1],
-        ping.geometry.coordinates[0],
-        Z
-      );
-      bins.add(bin);
-    });
-    trip.matches.bins = Array.from(bins);
-    // store bin geometry
-    bins.forEach(bin => {
-      var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
-        bin: bin
-      });
-      stats.geometry.bins[bin] = geo;
-    });
-  })
-
   const timeFilteredTrips = trips
     .filter(trip => {
       return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
@@ -401,9 +401,7 @@ async function tripVolumes(
     .filter(trip => !!trip.matches)
     .map(trip => {
       delete trip.route;
-      delete trip.matches.pickupZones;
-      delete trip.matches.dropoffZones;
-      if (trip.matches.streets) {
+      if (trip.matches.streets.segments) {
         trip.matches.streets = trip.matches.streets.segments
       }
       return trip;
@@ -699,9 +697,31 @@ async function pickups(
   trips,
   config
 ) {
+  const timeFilteredTrips = trips
+    .filter(trip => {
+      return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
+    })
+    .filter(trip => !!trip.matches)
+    .map(trip => {
+      delete trip.route;
+      if (trip.matches.streets.segments) {
+        trip.matches.streets = trip.matches.streets.segments
+      }
+      return trip;
+    });
+
+  const requestData = {
+    trips: timeFilteredTrips,
+    // "privacy_minimum": privacyMinimum
+  }
+  fs.writeFileSync('/cache/pickup.json', JSON.stringify(requestData));
+
+  await axios.post('http://conflator/pickup', requestData)
+  return;
   for (let trip of trips) {
     // check for time range
     if (trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND) {
+      return;
       // zones
       if (trip.matches.pickupZones) {
         var timeBins = getTimeBins(reportDay, trip.start_time);

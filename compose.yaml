@@ -5,6 +5,8 @@ services:
     stdin_open: true
     links:
       - conflator:conflator
+    depends_on:
+      - conflator
     volumes:
       - C:\Users\bscholer\Documents\Projects\mobility-metrics\data:/data
       - C:\Users\bscholer\Documents\Projects\mobility-metrics\cache:/cache
