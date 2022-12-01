@@ -24,13 +24,11 @@ const summarize = async function (
   config
 ) {
   return new Promise(async (resolve, reject) => {
-    const privacyMinimum = config.privacyMinimum || 3;
-
     // import all providers
-    const providers = Object.keys(config.providers).filter(provider => {
-      return config.providers[provider].enabled;
-    });
-    providers.push("All");
+    // const providers = Object.keys(config.providers).filter(provider => {
+    //   return config.providers[provider].enabled;
+    // });
+    // providers.push("All");
 
     var cacheDayPath = path.join(cachePath, reportDay.format("YYYY-MM-DD"));
     if (!fs.existsSync(cacheDayPath)) {
@@ -64,307 +62,369 @@ const summarize = async function (
 
 
     console.log("  summarizing...");
-    for (let provider of providers) {
-      var cacheProviderPath = path.join(cacheDayPath, provider);
-      mkdirp.sync(cacheProviderPath);
+    mkdirp.sync(cacheDayPath);
 
-      console.log("    " + provider + "...");
+    fs.appendFileSync(path.join(cacheDayPath, "trips.json"), "");
+    fs.appendFileSync(path.join(cacheDayPath, "changes.json"), "");
 
-      fs.appendFileSync(path.join(cacheProviderPath, "trips.json"), "");
-      fs.appendFileSync(path.join(cacheProviderPath, "changes.json"), "");
-
-      var trips = fs
-        .readFileSync(path.join(cacheProviderPath, "trips.json"))
-        .toString()
-        .split("\n")
-        .filter(line => {
-          return line.length;
-        })
-        .map(JSON.parse);
-      var changes = fs
-        .readFileSync(path.join(cacheProviderPath, "changes.json"))
-        .toString()
-        .split("\n")
-        .filter(line => {
-          return line.length;
-        })
-        .map(JSON.parse);
-
-
-      trips.reduce((min, curr) => {
-        return curr.route.features[0].properties.timestamp < min ? curr.route.features[0].properties.timestamp : min;
+    var trips = fs
+      .readFileSync(path.join(cacheDayPath, "trips.json"))
+      .toString()
+      .split("\n")
+      .filter(line => {
+        return line.length;
       })
+      .map(JSON.parse);
+    var changes = fs
+      .readFileSync(path.join(cacheDayPath, "changes.json"))
+      .toString()
+      .split("\n")
+      .filter(line => {
+        return line.length;
+      })
+      .map(JSON.parse);
 
-      var totalVehicles = new Set();
-      var totalActiveVehicles = new Set();
-      var stats = {
-        version: version,
-        totalVehicles: 0,
-        totalActiveVehicles: 0,
-        totalTrips: 0,
-        totalDistance: 0,
-        totalDuration: 0,
-        geometry: {
-          bins: {},
-          streets: {},
-          zones: {},
-          pairs: {}
+
+    trips.reduce((min, curr) => {
+      return curr.route.features[0].properties.timestamp < min ? curr.route.features[0].properties.timestamp : min;
+    })
+
+    var totalVehicles = new Set();
+    var totalActiveVehicles = new Set();
+    var stats = {
+      version: version,
+      totalVehicles: 0,
+      totalActiveVehicles: 0,
+      totalTrips: 0,
+      totalDistance: 0,
+      totalDuration: 0,
+      geometry: {
+        bin: {},
+        street: {},
+        zone: {},
+        pairs: {},
+        jurisdiction: {},
+      },
+      fleet: {
+        available: {},
+        reserved: {},
+        unavailable: {}
+      },
+      tripVolumes: {
+        bin: {
+          day: {},
+          hour: {},
+          minute: {}
         },
-        fleet: {
-          available: {},
-          reserved: {},
-          unavailable: {}
+        zone: {
+          day: {},
+          hour: {},
+          minute: {}
         },
-        tripVolumes: {
-          bins: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          zones: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          streets: {
-            day: {},
-            hour: {},
-            minute: {}
-          }
+        jurisdiction: {
+          day: {},
+          hour: {},
+          minute: {}
         },
-        pickups: {
-          bins: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          zones: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          streets: {
-            day: {},
-            hour: {},
-            minute: {}
-          }
-        },
-        dropoffs: {
-          bins: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          zones: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          streets: {
-            day: {},
-            hour: {},
-            minute: {}
-          }
-        },
-        flows: {
-          pairs: {
-            day: {},
-            hour: {},
-            minute: {}
-          }
-        },
-        availability: {
-          bins: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          zones: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          streets: {
-            day: {},
-            hour: {},
-            minute: {}
-          }
-        },
-        onstreet: {
-          bins: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          zones: {
-            day: {},
-            hour: {},
-            minute: {}
-          },
-          streets: {
-            day: {},
-            hour: {},
-            minute: {}
-          }
+        street: {
+          day: {},
+          hour: {},
+          minute: {}
         }
-      };
-
-      // add zones to geometries
-      trips.forEach(trip => {
-        trip.matches.zones.forEach(zone => {
-          var zoneGeometry = config.zones.features.find(z => {
-            return z.properties.id + "" === zone + "";
-          })
-          if (zoneGeometry) {
-            if (!stats.geometry.zones[zone]) {
-              stats.geometry.zones[zone] = zoneGeometry;
-            }
-          }
-        })
-      })
-      changes.forEach(change => {
-        if (change.matches.zones) {
-          const zone = change.matches.zones;
-          var zoneGeometry = config.zones.features.find(z => {
-            return z.properties.id + "" === zone + "";
-          })
-          if (zoneGeometry) {
-            if (!stats.geometry.zones[zone]) {
-              stats.geometry.zones[zone] = zoneGeometry;
-            }
-          }
+      },
+      pickups: {
+        bin: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        zone: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        jurisdiction: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        street: {
+          day: {},
+          hour: {},
+          minute: {}
         }
-      })
-
-      // add streets to geometries
-      trips.forEach(trip => {
-        trip.matches.streets.segments
-          .map((segment, s) => {
-            return turf.lineString(trip.matches.streets.matchedPath.geometry.coordinates[s], {
-              ref: segment.geometryId
-            });
-          })
-          .forEach(f => {
-            if (!stats.geometry.streets[f.properties.ref]) {
-              stats.geometry.streets[f.properties.ref] = f;
-            }
-          });
-      })
-
-      // trips.forEach(trip => {
-      //   trip.matches.streets.forEach(street => {
-      //     var streetGeometry = config.streets.features.find(s => {
-      //       return s.properties.id + "" === street + "";
-      //     })
-      //     if (streetGeometry) {
-      //       if (!stats.geometry.streets[street]) {
-      //         stats.geometry.streets[street] = streetGeometry;
-      //       }
-      //     }
-      //   })
-
-      for (let trip of trips) {
-        totalVehicles.add(trip.vehicle_id);
-        totalActiveVehicles.add(trip.vehicle_id);
-
-        // convert to miles
-        trip.trip_distance = trip.trip_distance * 0.000621371;
-        // convert to minutes
-        trip.trip_duration = trip.trip_duration / 60;
-
-        // summary stats
-        stats.totalActiveVehicles = totalActiveVehicles.size;
-        stats.totalTrips++;
-        stats.totalDistance += trip.trip_distance;
-        stats.totalDuration += trip.trip_duration;
-        stats.averageVehicleDistance =
-          stats.totalDistance / stats.totalActiveVehicles;
-        stats.averageVehicleDuration =
-          stats.totalDuration / stats.totalActiveVehicles;
-        stats.averageTripDistance = stats.totalDistance / stats.totalTrips;
-        stats.averageTripDuration = stats.totalDuration / stats.totalTrips;
-        stats.averageTrips = stats.totalTrips / stats.totalActiveVehicles;
+      },
+      dropoffs: {
+        bin: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        zone: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        jurisdiction: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        street: {
+          day: {},
+          hour: {},
+          minute: {}
+        }
+      },
+      flows: {
+        pairs: {
+          day: {},
+          hour: {},
+          minute: {}
+        }
+      },
+      availability: {
+        bin: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        zone: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        jurisdiction: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        street: {
+          day: {},
+          hour: {},
+          minute: {}
+        }
+      },
+      onstreet: {
+        bin: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        zone: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        jurisdiction: {
+          day: {},
+          hour: {},
+          minute: {}
+        },
+        street: {
+          day: {},
+          hour: {},
+          minute: {}
+        }
       }
+    };
 
-      // build state histories for each vehicle
-      var states = {};
-      changes.forEach(change => {
-        if (!states[change.vehicle_id]) {
-          totalVehicles.add(change.vehicle_id);
-          stats.totalVehicles = totalVehicles.size;
-          states[change.vehicle_id] = [];
+    // add zone to geometries
+    trips.forEach(trip => {
+      trip.matches.zone.forEach(zone => {
+        var zoneGeometry = config.zone.features.find(z => {
+          return z.properties.id + "" === zone + "";
+        })
+        if (zoneGeometry) {
+          if (!stats.geometry.zone[zone]) {
+            stats.geometry.zone[zone] = zoneGeometry;
+          }
         }
-        states[change.vehicle_id].push(change);
-      });
-      // sort by time
-      Object.keys(states).forEach(id => {
-        states[id] = states[id].sort((a, b) => a.event_time - b.event_time);
-      });
-
-      trips.map(trip => {
-        var bins = new Set();
-        trip.route.features.forEach(ping => {
-          var bin = h3.geoToH3(
-            ping.geometry.coordinates[1],
-            ping.geometry.coordinates[0],
-            Z
-          );
-          bins.add(bin);
-        });
-        trip.matches.bins = Array.from(bins);
-        // store bin geometry
-        bins.forEach(bin => {
-          var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
-            bin: bin
-          });
-          stats.geometry.bins[bin] = geo;
-        });
       })
+    })
+    changes.forEach(change => {
+      if (change.matches.zone) {
+        const zone = change.matches.zone;
+        var zoneGeometry = config.zone.features.find(z => {
+          return z.properties.id + "" === zone + "";
+        })
+        if (zoneGeometry) {
+          if (!stats.geometry.zone[zone]) {
+            stats.geometry.zone[zone] = zoneGeometry;
+          }
+        }
+      }
+    })
 
+    // add jurisdiction to geometries
+    trips.forEach(trip => {
+      trip.matches.jurisdiction.forEach(jurisdiction => {
+        var jurisdictionGeometry = config.jurisdiction.features.find(j => {
+          return j.properties.id + "" === jurisdiction + "";
+        })
+        if (jurisdictionGeometry) {
+          if (!stats.geometry.jurisdiction[jurisdiction]) {
+            stats.geometry.jurisdiction[jurisdiction] = jurisdictionGeometry;
+          }
+        }
+      })
+    })
+    changes.forEach(change => {
+      if (change.matches.jurisdiction) {
+        const jurisdiction = change.matches.jurisdiction;
+        var jurisdictionGeometry = config.jurisdiction.features.find(j => {
+          return j.properties.id + "" === jurisdiction + "";
+        })
+        if (jurisdictionGeometry) {
+          if (!stats.geometry.jurisdiction[jurisdiction]) {
+            stats.geometry.jurisdiction[jurisdiction] = jurisdictionGeometry;
+          }
+        }
+      }
+    })
 
-      // console.log("      fleet sizes...");
-      // await fleet(startDay, endDay, reportDay, stats, states);
+    // add street to geometries
+    trips.forEach(trip => {
+      trip.matches.street.segment
+        .map((segment, s) => {
+          return turf.lineString(trip.matches.street.matchedPath.geometry.coordinates[s], {
+            ref: segment.geometryId
+          });
+        })
+        .forEach(f => {
+          if (!stats.geometry.street[f.properties.ref]) {
+            stats.geometry.street[f.properties.ref] = f;
+          }
+        });
+    })
 
-      console.log("      trip volumes...");
-      await tripVolumes(
-        startDay,
-        endDay,
-        reportDay,
-        stats,
-        trips,
-        privacyMinimum,
-        config
-      );
-      // console.log("      availability...");
-      // await availability(startDay, endDay, reportDay, stats, states, config);
-      // console.log("      onstreet...");
-      // await onstreet(startDay, endDay, reportDay, stats, states, config);
-      console.log("      pickups...");
-      await pickups(startDay, endDay, reportDay, stats, trips, config);
-      console.log("      dropoffs...");
-      await dropoffs(startDay, endDay, reportDay, stats, trips, config);
-      // console.log("      flows...");
-      // flows(startDay, endDay, reportDay, stats, trips, privacyMinimum);
+    // add change street to geometries
+    changes.forEach(change => {
+      if (change.matches.street) {
+        const feature = change.matches.streetGeometry.features[0];
+        const line = turf.lineString(feature.geometry.coordinates, {
+          ref: feature.id
+        });
+        if (!stats.geometry.street[line.properties.ref]) {
+          stats.geometry.street[line.properties.ref] = line;
+        }
+      }
+    });
 
-      var summaryPath = path.join(
-        publicPath,
-        "data",
-        reportDay.format("YYYY-MM-DD")
-      );
-      mkdirp.sync(summaryPath);
-      summaryFilePath = path.join(summaryPath, provider + ".json");
+    // trips.forEach(trip => {
+    //   trip.matches.street.forEach(street => {
+    //     var streetGeometry = config.street.features.find(s => {
+    //       return s.properties.id + "" === street + "";
+    //     })
+    //     if (streetGeometry) {
+    //       if (!stats.geometry.street[street]) {
+    //         stats.geometry.street[street] = streetGeometry;
+    //       }
+    //     }
+    //   })
 
-      fs.writeFileSync(summaryFilePath, JSON.stringify(stats));
+    for (let trip of trips) {
+      totalVehicles.add(trip.vehicle_id);
+      totalActiveVehicles.add(trip.vehicle_id);
+
+      // convert to miles
+      trip.trip_distance = trip.trip_distance * 0.000621371;
+      // convert to minutes
+      trip.trip_duration = trip.trip_duration / 60;
+
+      // summary stats
+      stats.totalActiveVehicles = totalActiveVehicles.size;
+      stats.totalTrips++;
+      stats.totalDistance += trip.trip_distance;
+      stats.totalDuration += trip.trip_duration;
+      stats.averageVehicleDistance =
+        stats.totalDistance / stats.totalActiveVehicles;
+      stats.averageVehicleDuration =
+        stats.totalDuration / stats.totalActiveVehicles;
+      stats.averageTripDistance = stats.totalDistance / stats.totalTrips;
+      stats.averageTripDuration = stats.totalDuration / stats.totalTrips;
+      stats.averageTrips = stats.totalTrips / stats.totalActiveVehicles;
     }
 
-    await report(
-      config,
-      providers,
-      publicPath,
-      startDay.format("YYYY-MM-DD"),
-      endDay.format("YYYY-MM-DD"),
-      reportDay.format("YYYY-MM-DD")
+    // build state histories for each vehicle
+    var states = {};
+    changes.forEach(change => {
+      if (!states[change.vehicle_id]) {
+        totalVehicles.add(change.vehicle_id);
+        stats.totalVehicles = totalVehicles.size;
+        states[change.vehicle_id] = [];
+      }
+      states[change.vehicle_id].push(change);
+    });
+    // sort by time
+    Object.keys(states).forEach(id => {
+      states[id] = states[id].sort((a, b) => a.event_time - b.event_time);
+    });
+
+    trips.map(trip => {
+      var bins = new Set();
+      trip.route.features.forEach(ping => {
+        var bin = h3.geoToH3(
+          ping.geometry.coordinates[1],
+          ping.geometry.coordinates[0],
+          Z
+        );
+        bins.add(bin);
+      });
+      trip.matches.bin = Array.from(bins);
+      // store bin geometry
+      bins.forEach(bin => {
+        var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
+          bin: bin
+        });
+        stats.geometry.bin[bin] = geo;
+      });
+    })
+
+    const privacyMinimum = config.privacyMinimum;
+
+    // console.log("      fleet sizes...");
+    // await fleet(startDay, endDay, reportDay, stats, states);
+
+    console.log("      trip volumes...");
+    await tripVolumes(
+      startDay,
+      endDay,
+      reportDay,
+      stats,
+      trips,
+      privacyMinimum,
+      config
     );
+    // console.log("      availability...");
+    // await availability(startDay, endDay, reportDay, stats, changes, config);
+    // console.log("      onstreet...");
+    // await onstreet(startDay, endDay, reportDay, stats, states, config);
+    console.log("      pickups...");
+    await pickups(startDay, endDay, reportDay, stats, trips, config);
+    console.log("      dropoffs...");
+    await dropoffs(startDay, endDay, reportDay, stats, trips, config);
+    console.log("      flows...");
+    await flows(startDay, endDay, reportDay, stats, trips, privacyMinimum);
+
+    // var summaryPath = path.join(
+    //   publicPath,
+    //   "data",
+    //   reportDay.format("YYYY-MM-DD")
+    // );
+    // mkdirp.sync(summaryPath);
+    // summaryFilePath = path.join(summaryPath, "all.json");
+    //
+    // fs.writeFileSync(summaryFilePath, JSON.stringify(stats));
+
+    // await report(
+    //   config,
+    //   // providers,
+    //   publicPath,
+    //   startDay.format("YYYY-MM-DD"),
+    //   endDay.format("YYYY-MM-DD"),
+    //   reportDay.format("YYYY-MM-DD")
+    // );
 
     resolve();
   });
@@ -378,12 +438,12 @@ function getTimeBins(reportDay, timestamp) {
   if (minutes >= 30) formattedMinutes = "30";
   if (minutes >= 45) formattedMinutes = "45";
 
-  var bins = {};
-  bins.day = reportDay.format("YYYY-MM-DD");
-  bins.hour = bins.day + "-" + time.format("HH");
-  bins.minute = bins.hour + "-" + formattedMinutes;
+  var bin = {};
+  bin.day = reportDay.format("YYYY-MM-DD");
+  bin.hour = bin.day + "-" + time.format("HH");
+  bin.minute = bin.hour + "-" + formattedMinutes;
 
-  return bins;
+  return bin;
 }
 
 async function tripVolumes(
@@ -401,292 +461,20 @@ async function tripVolumes(
     .filter(trip => !!trip.matches)
     .map(trip => {
       delete trip.route;
-      if (trip.matches.streets.segments) {
-        trip.matches.streets = trip.matches.streets.segments
+      if (trip.matches.street.segment) {
+        trip.matches.street = trip.matches.street.segment
       }
       return trip;
     });
 
   const requestData = {
     trips: timeFilteredTrips,
-    "privacy_minimum": privacyMinimum
+    "privacy_minimum": privacyMinimum,
+    "report_date": reportDay.format("YYYY-MM-DD")
   }
   fs.writeFileSync('/cache/trip_volume.json', JSON.stringify(requestData));
 
   await axios.post('http://conflator/trip_volume', requestData)
-  return;
-  for (let trip of trips) {
-    // check for time range
-    if (trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND) {
-      // zones
-      if (trip.matches.zones) {
-        var timeBins = getTimeBins(reportDay, trip.start_time);
-        // populate time bins
-        if (!stats.tripVolumes.zones.day[timeBins.day]) {
-          stats.tripVolumes.zones.day[timeBins.day] = {};
-        }
-        if (!stats.tripVolumes.zones.hour[timeBins.hour]) {
-          stats.tripVolumes.zones.hour[timeBins.hour] = {};
-        }
-        if (!stats.tripVolumes.zones.minute[timeBins.minute]) {
-          stats.tripVolumes.zones.minute[timeBins.minute] = {};
-        }
-
-        // aggregate stats
-        trip.matches.zones.forEach(zone => {
-          // populate zone bins
-          if (!stats.tripVolumes.zones.day[timeBins.day][zone]) {
-            stats.tripVolumes.zones.day[timeBins.day][zone] = 0;
-          }
-          if (!stats.tripVolumes.zones.hour[timeBins.hour][zone]) {
-            stats.tripVolumes.zones.hour[timeBins.hour][zone] = 0;
-          }
-          if (!stats.tripVolumes.zones.minute[timeBins.minute][zone]) {
-            stats.tripVolumes.zones.minute[timeBins.minute][zone] = 0;
-          }
-          // increment counts
-          stats.tripVolumes.zones.day[timeBins.day][zone]++;
-          stats.tripVolumes.zones.hour[timeBins.hour][zone]++;
-          stats.tripVolumes.zones.minute[timeBins.minute][zone]++;
-
-        });
-      }
-
-      // hex bins
-
-
-      var timeBins = getTimeBins(reportDay, trip.start_time);
-      // populate time bins
-      if (!stats.tripVolumes.bins.day[timeBins.day]) {
-        stats.tripVolumes.bins.day[timeBins.day] = {};
-      }
-      if (!stats.tripVolumes.bins.hour[timeBins.hour]) {
-        stats.tripVolumes.bins.hour[timeBins.hour] = {};
-      }
-      if (!stats.tripVolumes.bins.minute[timeBins.minute]) {
-        stats.tripVolumes.bins.minute[timeBins.minute] = {};
-      }
-
-      // aggregate stats
-      bins.forEach(bin => {
-        // populate hex bins
-        if (!stats.tripVolumes.bins.day[timeBins.day][bin]) {
-          stats.tripVolumes.bins.day[timeBins.day][bin] = 0;
-        }
-        if (!stats.tripVolumes.bins.hour[timeBins.hour][bin]) {
-          stats.tripVolumes.bins.hour[timeBins.hour][bin] = 0;
-        }
-        if (!stats.tripVolumes.bins.minute[timeBins.minute][bin]) {
-          stats.tripVolumes.bins.minute[timeBins.minute][bin] = 0;
-        }
-        // increment hex bins
-        stats.tripVolumes.bins.day[timeBins.day][bin]++;
-        stats.tripVolumes.bins.hour[timeBins.hour][bin]++;
-        stats.tripVolumes.bins.minute[timeBins.minute][bin]++;
-      });
-
-      // sharedstreets aggregation
-      var refs = new Set();
-
-      var line = turf.lineString(
-        trip.route.features.map(pt => {
-          return pt.geometry.coordinates;
-        })
-      );
-
-      let match = trip.matches.streets;
-
-      if (
-        match &&
-        match.segments &&
-        match.matchedPath &&
-        match.matchedPath.geometry &&
-        match.matchedPath.geometry.coordinates &&
-        match.matchedPath.geometry.coordinates.length === match.segments.length
-      ) {
-        match.segments
-          .map((segment, s) => {
-            return turf.lineString(match.matchedPath.geometry.coordinates[s], {
-              ref: segment.geometryId
-            });
-          })
-          .forEach(f => {
-            refs.add(f.properties.ref);
-
-            if (!stats.geometry.streets[f.properties.ref]) {
-              stats.geometry.streets[f.properties.ref] = f;
-            }
-          });
-        // populate time bins
-        if (!stats.tripVolumes.streets.day[timeBins.day]) {
-          stats.tripVolumes.streets.day[timeBins.day] = {};
-        }
-        if (!stats.tripVolumes.streets.hour[timeBins.hour]) {
-          stats.tripVolumes.streets.hour[timeBins.hour] = {};
-        }
-        if (!stats.tripVolumes.streets.minute[timeBins.minute]) {
-          stats.tripVolumes.streets.minute[timeBins.minute] = {};
-        }
-
-        // aggregate stats
-        refs.forEach(ref => {
-          // populate street refs
-          if (!stats.tripVolumes.streets.day[timeBins.day][ref]) {
-            stats.tripVolumes.streets.day[timeBins.day][ref] = 0;
-          }
-          if (!stats.tripVolumes.streets.hour[timeBins.hour][ref]) {
-            stats.tripVolumes.streets.hour[timeBins.hour][ref] = 0;
-          }
-          if (!stats.tripVolumes.streets.minute[timeBins.minute][ref]) {
-            stats.tripVolumes.streets.minute[timeBins.minute][ref] = 0;
-          }
-          // increment hex bins
-          stats.tripVolumes.streets.day[timeBins.day][ref]++;
-          stats.tripVolumes.streets.hour[timeBins.hour][ref]++;
-          stats.tripVolumes.streets.minute[timeBins.minute][ref]++;
-        });
-      }
-    }
-  }
-
-  // filter
-  // delete sparse day bins
-  Object.keys(stats.tripVolumes.bins.day).forEach(day => {
-    Object.keys(stats.tripVolumes.bins.day[day]).forEach(bin => {
-      var val = stats.tripVolumes.bins.day[day][bin];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.bins.day[day][bin];
-      }
-    });
-  });
-  // delete sparse bin days
-  Object.keys(stats.tripVolumes.bins.day).forEach(day => {
-    if (!Object.keys(stats.tripVolumes.bins.day[day]).length) {
-      delete stats.tripVolumes.bins.day[day];
-    }
-  });
-  // delete sparse hour bins
-  Object.keys(stats.tripVolumes.bins.hour).forEach(hour => {
-    Object.keys(stats.tripVolumes.bins.hour[hour]).forEach(bin => {
-      var val = stats.tripVolumes.bins.hour[hour][bin];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.bins.hour[hour][bin];
-      }
-    });
-  });
-  // delete sparse bin hours
-  Object.keys(stats.tripVolumes.bins.hour).forEach(hour => {
-    if (!Object.keys(stats.tripVolumes.bins.hour[hour]).length) {
-      delete stats.tripVolumes.bins.hour[hour];
-    }
-  });
-  // delete sparse minutes bins
-  Object.keys(stats.tripVolumes.bins.minute).forEach(minute => {
-    Object.keys(stats.tripVolumes.bins.minute[minute]).forEach(bin => {
-      var val = stats.tripVolumes.bins.minute[minute][bin];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.bins.minute[minute][bin];
-      }
-    });
-  });
-  // delete sparse bin minutes
-  Object.keys(stats.tripVolumes.bins.minute).forEach(minute => {
-    if (!Object.keys(stats.tripVolumes.bins.minute[minute]).length) {
-      delete stats.tripVolumes.bins.minute[minute];
-    }
-  });
-
-  // delete sparse day zones
-  Object.keys(stats.tripVolumes.zones.day).forEach(day => {
-    Object.keys(stats.tripVolumes.zones.day[day]).forEach(zone => {
-      var val = stats.tripVolumes.zones.day[day][zone];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.zones.day[day][zone];
-      }
-    });
-  });
-  // delete sparse zone days
-  Object.keys(stats.tripVolumes.zones.day).forEach(day => {
-    if (!Object.keys(stats.tripVolumes.zones.day[day]).length) {
-      delete stats.tripVolumes.zones.day[day];
-    }
-  });
-  // delete sparse hour zones
-  Object.keys(stats.tripVolumes.zones.hour).forEach(hour => {
-    Object.keys(stats.tripVolumes.zones.hour[hour]).forEach(zone => {
-      var val = stats.tripVolumes.zones.hour[hour][zone];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.zones.hour[hour][zone];
-      }
-    });
-  });
-  // delete sparse zone hours
-  Object.keys(stats.tripVolumes.zones.hour).forEach(hour => {
-    if (!Object.keys(stats.tripVolumes.zones.hour[hour]).length) {
-      delete stats.tripVolumes.zones.hour[hour];
-    }
-  });
-  // delete sparse minutes zones
-  Object.keys(stats.tripVolumes.zones.minute).forEach(minute => {
-    Object.keys(stats.tripVolumes.zones.minute[minute]).forEach(zone => {
-      var val = stats.tripVolumes.zones.minute[minute][zone];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.zones.minute[minute][zone];
-      }
-    });
-  });
-  // delete sparse zone minutes
-  Object.keys(stats.tripVolumes.zones.minute).forEach(minute => {
-    if (!Object.keys(stats.tripVolumes.zones.minute[minute]).length) {
-      delete stats.tripVolumes.zones.minute[minute];
-    }
-  });
-
-  // delete sparse day streets
-  Object.keys(stats.tripVolumes.streets.day).forEach(day => {
-    Object.keys(stats.tripVolumes.streets.day[day]).forEach(street => {
-      var val = stats.tripVolumes.streets.day[day][street];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.streets.day[day][street];
-      }
-    });
-  });
-  // delete sparse street days
-  Object.keys(stats.tripVolumes.streets.day).forEach(day => {
-    if (!Object.keys(stats.tripVolumes.streets.day[day]).length) {
-      delete stats.tripVolumes.streets.day[day];
-    }
-  });
-  // delete sparse hour streets
-  Object.keys(stats.tripVolumes.streets.hour).forEach(hour => {
-    Object.keys(stats.tripVolumes.streets.hour[hour]).forEach(street => {
-      var val = stats.tripVolumes.streets.hour[hour][street];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.streets.hour[hour][street];
-      }
-    });
-  });
-  // delete sparse street hours
-  Object.keys(stats.tripVolumes.streets.hour).forEach(hour => {
-    if (!Object.keys(stats.tripVolumes.streets.hour[hour]).length) {
-      delete stats.tripVolumes.streets.hour[hour];
-    }
-  });
-  // delete sparse minutes streets
-  Object.keys(stats.tripVolumes.streets.minute).forEach(minute => {
-    Object.keys(stats.tripVolumes.streets.minute[minute]).forEach(street => {
-      var val = stats.tripVolumes.streets.minute[minute][street];
-      if (val < privacyMinimum) {
-        delete stats.tripVolumes.streets.minute[minute][street];
-      }
-    });
-  });
-  // delete sparse street minutes
-  Object.keys(stats.tripVolumes.streets.minute).forEach(minute => {
-    if (!Object.keys(stats.tripVolumes.streets.minute[minute]).length) {
-      delete stats.tripVolumes.streets.minute[minute];
-    }
-  });
 }
 
 async function pickups(
@@ -704,147 +492,19 @@ async function pickups(
     .filter(trip => !!trip.matches)
     .map(trip => {
       delete trip.route;
-      if (trip.matches.streets.segments) {
-        trip.matches.streets = trip.matches.streets.segments
+      if (trip.matches.street.segment) {
+        trip.matches.street = trip.matches.street.segment
       }
       return trip;
     });
 
   const requestData = {
     trips: timeFilteredTrips,
-    // "privacy_minimum": privacyMinimum
+    "report_date": reportDay.format("YYYY-MM-DD")
   }
   fs.writeFileSync('/cache/pickup.json', JSON.stringify(requestData));
 
   await axios.post('http://conflator/pickup', requestData)
-  return;
-  for (let trip of trips) {
-    // check for time range
-    if (trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND) {
-      return;
-      // zones
-      if (trip.matches.pickupZones) {
-        var timeBins = getTimeBins(reportDay, trip.start_time);
-        // populate time bins
-        if (!stats.pickups.zones.day[timeBins.day]) {
-          stats.pickups.zones.day[timeBins.day] = {};
-        }
-        if (!stats.pickups.zones.hour[timeBins.hour]) {
-          stats.pickups.zones.hour[timeBins.hour] = {};
-        }
-        if (!stats.pickups.zones.minute[timeBins.minute]) {
-          stats.pickups.zones.minute[timeBins.minute] = {};
-        }
-
-        // aggregate stats
-        trip.matches.pickupZones.forEach(zone => {
-          // populate hex bins
-          if (!stats.pickups.zones.day[timeBins.day][zone]) {
-            stats.pickups.zones.day[timeBins.day][zone] = 0;
-          }
-          if (!stats.pickups.zones.hour[timeBins.hour][zone]) {
-            stats.pickups.zones.hour[timeBins.hour][zone] = 0;
-          }
-          if (!stats.pickups.zones.minute[timeBins.minute][zone]) {
-            stats.pickups.zones.minute[timeBins.minute][zone] = 0;
-          }
-          // increment hex bins
-          stats.pickups.zones.day[timeBins.day][zone]++;
-          stats.pickups.zones.hour[timeBins.hour][zone]++;
-          stats.pickups.zones.minute[timeBins.minute][zone]++;
-        });
-      }
-
-      // hex bins
-
-      var bins = new Set();
-      [trip.route.features[0]].forEach(ping => {
-        var bin = h3.geoToH3(
-          ping.geometry.coordinates[1],
-          ping.geometry.coordinates[0],
-          Z
-        );
-        bins.add(bin);
-      });
-      // store bin geometry
-      bins.forEach(bin => {
-        var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
-          bin: bin
-        });
-        stats.geometry.bins[bin] = geo;
-      });
-
-      var timeBins = getTimeBins(reportDay, trip.start_time);
-      // populate time bins
-      if (!stats.pickups.bins.day[timeBins.day]) {
-        stats.pickups.bins.day[timeBins.day] = {};
-      }
-      if (!stats.pickups.bins.hour[timeBins.hour]) {
-        stats.pickups.bins.hour[timeBins.hour] = {};
-      }
-      if (!stats.pickups.bins.minute[timeBins.minute]) {
-        stats.pickups.bins.minute[timeBins.minute] = {};
-      }
-
-      // aggregate stats
-      bins.forEach(bin => {
-        // populate hex bins
-        if (!stats.pickups.bins.day[timeBins.day][bin]) {
-          stats.pickups.bins.day[timeBins.day][bin] = 0;
-        }
-        if (!stats.pickups.bins.hour[timeBins.hour][bin]) {
-          stats.pickups.bins.hour[timeBins.hour][bin] = 0;
-        }
-        if (!stats.pickups.bins.minute[timeBins.minute][bin]) {
-          stats.pickups.bins.minute[timeBins.minute][bin] = 0;
-        }
-        // increment hex bins
-        stats.pickups.bins.day[timeBins.day][bin]++;
-        stats.pickups.bins.hour[timeBins.hour][bin]++;
-        stats.pickups.bins.minute[timeBins.minute][bin]++;
-      });
-
-      // streets
-
-      // var matches = await graph.matchPoint(trip.route.features[0], null, 1);
-      // if (matches.length) {
-      //   var ref = matches[0].geometryId;
-      //   // cache geometry from ref
-      //   var geo = JSON.parse(
-      //     JSON.stringify(graph.tileIndex.featureIndex.get(ref))
-      //   );
-      //   geo.properties = {
-      //     ref: ref
-      //   };
-      //   stats.geometry.streets[ref] = geo;
-      //
-      //   // populate time bins
-      //   if (!stats.pickups.streets.day[timeBins.day]) {
-      //     stats.pickups.streets.day[timeBins.day] = {};
-      //   }
-      //   if (!stats.pickups.streets.hour[timeBins.hour]) {
-      //     stats.pickups.streets.hour[timeBins.hour] = {};
-      //   }
-      //   if (!stats.pickups.streets.minute[timeBins.minute]) {
-      //     stats.pickups.streets.minute[timeBins.minute] = {};
-      //   }
-      //   // populate streets
-      //   if (!stats.pickups.streets.day[timeBins.day][ref]) {
-      //     stats.pickups.streets.day[timeBins.day][ref] = 0;
-      //   }
-      //   if (!stats.pickups.streets.hour[timeBins.hour][ref]) {
-      //     stats.pickups.streets.hour[timeBins.hour][ref] = 0;
-      //   }
-      //   if (!stats.pickups.streets.minute[timeBins.minute][ref]) {
-      //     stats.pickups.streets.minute[timeBins.minute][ref] = 0;
-      //   }
-      //   // increment streets
-      //   stats.pickups.streets.day[timeBins.day][ref]++;
-      //   stats.pickups.streets.hour[timeBins.hour][ref]++;
-      //   stats.pickups.streets.minute[timeBins.minute][ref]++;
-      // }
-    }
-  }
 }
 
 async function dropoffs(
@@ -852,250 +512,52 @@ async function dropoffs(
   endDay,
   reportDay,
   stats,
-  trips,
-  config
+  trips
 ) {
-  for (let trip of trips) {
-    // check for time range
-    if (trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND) {
-      // zones
-      if (trip.matches.dropoffZones) {
-        var timeBins = getTimeBins(reportDay, trip.end_time);
-        // populate time bins
-        if (!stats.dropoffs.zones.day[timeBins.day]) {
-          stats.dropoffs.zones.day[timeBins.day] = {};
-        }
-        if (!stats.dropoffs.zones.hour[timeBins.hour]) {
-          stats.dropoffs.zones.hour[timeBins.hour] = {};
-        }
-        if (!stats.dropoffs.zones.minute[timeBins.minute]) {
-          stats.dropoffs.zones.minute[timeBins.minute] = {};
-        }
-
-        // aggregate stats
-        trip.matches.dropoffZones.forEach(zone => {
-          // populate hex bins
-          if (!stats.dropoffs.zones.day[timeBins.day][zone]) {
-            stats.dropoffs.zones.day[timeBins.day][zone] = 0;
-          }
-          if (!stats.dropoffs.zones.hour[timeBins.hour][zone]) {
-            stats.dropoffs.zones.hour[timeBins.hour][zone] = 0;
-          }
-          if (!stats.dropoffs.zones.minute[timeBins.minute][zone]) {
-            stats.dropoffs.zones.minute[timeBins.minute][zone] = 0;
-          }
-          // increment hex bins
-          stats.dropoffs.zones.day[timeBins.day][zone]++;
-          stats.dropoffs.zones.hour[timeBins.hour][zone]++;
-          stats.dropoffs.zones.minute[timeBins.minute][zone]++;
-        });
+  const timeFilteredTrips = trips
+    .filter(trip => {
+      return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
+    })
+    .filter(trip => !!trip.matches)
+    .map(trip => {
+      delete trip.route;
+      if (trip.matches.street.segment) {
+        trip.matches.street = trip.matches.street.segment
       }
+      return trip;
+    });
 
-      // hex bins
-
-      var bins = new Set();
-      [trip.route.features[trip.route.features.length - 1]].forEach(ping => {
-        var bin = h3.geoToH3(
-          ping.geometry.coordinates[1],
-          ping.geometry.coordinates[0],
-          Z
-        );
-        bins.add(bin);
-      });
-      // store bin geometry
-      bins.forEach(bin => {
-        var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
-          bin: bin
-        });
-        stats.geometry.bins[bin] = geo;
-      });
-
-      var timeBins = getTimeBins(reportDay, trip.end_time);
-      // populate time bins
-      if (!stats.dropoffs.bins.day[timeBins.day]) {
-        stats.dropoffs.bins.day[timeBins.day] = {};
-      }
-      if (!stats.dropoffs.bins.hour[timeBins.hour]) {
-        stats.dropoffs.bins.hour[timeBins.hour] = {};
-      }
-      if (!stats.dropoffs.bins.minute[timeBins.minute]) {
-        stats.dropoffs.bins.minute[timeBins.minute] = {};
-      }
-
-      // aggregate stats
-      bins.forEach(bin => {
-        // populate hex bins
-        if (!stats.dropoffs.bins.day[timeBins.day][bin]) {
-          stats.dropoffs.bins.day[timeBins.day][bin] = 0;
-        }
-        if (!stats.dropoffs.bins.hour[timeBins.hour][bin]) {
-          stats.dropoffs.bins.hour[timeBins.hour][bin] = 0;
-        }
-        if (!stats.dropoffs.bins.minute[timeBins.minute][bin]) {
-          stats.dropoffs.bins.minute[timeBins.minute][bin] = 0;
-        }
-        // increment hex bins
-        stats.dropoffs.bins.day[timeBins.day][bin]++;
-        stats.dropoffs.bins.hour[timeBins.hour][bin]++;
-        stats.dropoffs.bins.minute[timeBins.minute][bin]++;
-      });
-
-      // sharedstreets aggregation
-      //   var matches = await graph.matchPoint(
-      //     trip.route.features[trip.route.features.length - 1],
-      //     null,
-      //     1
-      //   );
-      //   if (matches.length) {
-      //     var ref = matches[0].geometryId;
-      //     // cache geometry from ref
-      //     var geo = JSON.parse(
-      //       JSON.stringify(graph.tileIndex.featureIndex.get(ref))
-      //     );
-      //     geo.properties = {
-      //       ref: ref
-      //     };
-      //     stats.geometry.streets[ref] = geo;
-      //
-      //     // populate time bins
-      //     if (!stats.dropoffs.streets.day[timeBins.day]) {
-      //       stats.dropoffs.streets.day[timeBins.day] = {};
-      //     }
-      //     if (!stats.dropoffs.streets.hour[timeBins.hour]) {
-      //       stats.dropoffs.streets.hour[timeBins.hour] = {};
-      //     }
-      //     if (!stats.dropoffs.streets.minute[timeBins.minute]) {
-      //       stats.dropoffs.streets.minute[timeBins.minute] = {};
-      //     }
-      //     // populate streets
-      //     if (!stats.dropoffs.streets.day[timeBins.day][ref]) {
-      //       stats.dropoffs.streets.day[timeBins.day][ref] = 0;
-      //     }
-      //     if (!stats.dropoffs.streets.hour[timeBins.hour][ref]) {
-      //       stats.dropoffs.streets.hour[timeBins.hour][ref] = 0;
-      //     }
-      //     if (!stats.dropoffs.streets.minute[timeBins.minute][ref]) {
-      //       stats.dropoffs.streets.minute[timeBins.minute][ref] = 0;
-      //     }
-      //     // increment streets
-      //     stats.dropoffs.streets.day[timeBins.day][ref]++;
-      //     stats.dropoffs.streets.hour[timeBins.hour][ref]++;
-      //     stats.dropoffs.streets.minute[timeBins.minute][ref]++;
-      //   }
-    }
+  const requestData = {
+    trips: timeFilteredTrips,
+    "report_date": reportDay.format("YYYY-MM-DD")
   }
+  fs.writeFileSync('/cache/dropoff.json', JSON.stringify(requestData));
+
+  await axios.post('http://conflator/dropoff', requestData)
 }
 
-function flows(startDay, endDay, reportDay, stats, trips, privacyMinimum) {
-  for (let trip of trips) {
-    // check for time range
-    if (trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND) {
-      var a = h3.geoToH3(
-        trip.route.features[0].geometry.coordinates[1],
-        trip.route.features[0].geometry.coordinates[0],
-        Z
-      );
-      var b = h3.geoToH3(
-        trip.route.features[trip.route.features.length - 1].geometry
-          .coordinates[1],
-        trip.route.features[trip.route.features.length - 1].geometry
-          .coordinates[0],
-        Z
-      );
+async function flows(startDay, endDay, reportDay, stats, trips, privacyMinimum) {
+  const timeFilteredTrips = trips
+    .filter(trip => {
+      return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
+    })
+    .filter(trip => !!trip.matches)
+    .map(trip => {
+      delete trip.route;
+      if (trip.matches.street.segment) {
+        trip.matches.street = trip.matches.street.segment
+      }
+      return trip;
+    });
 
-      // store pair geometry
-      var pair = turf.lineString(
-        [
-          turf.centroid(turf.polygon([h3.h3ToGeoBoundary(a, true)])).geometry
-            .coordinates,
-          turf.centroid(turf.polygon([h3.h3ToGeoBoundary(b, true)])).geometry
-            .coordinates
-        ],
-        { pair: a + ">" + b }
-      );
-      stats.geometry.pairs[pair.properties.pair] = pair;
-
-      var timeBins = getTimeBins(reportDay, trip.start_time);
-      // populate time bins
-      if (!stats.flows.pairs.day[timeBins.day]) {
-        stats.flows.pairs.day[timeBins.day] = {};
-      }
-      if (!stats.flows.pairs.hour[timeBins.hour]) {
-        stats.flows.pairs.hour[timeBins.hour] = {};
-      }
-      if (!stats.flows.pairs.minute[timeBins.minute]) {
-        stats.flows.pairs.minute[timeBins.minute] = {};
-      }
-
-      // aggregate stats
-      // populate flow pairs
-      if (!stats.flows.pairs.day[timeBins.day][pair.properties.pair]) {
-        stats.flows.pairs.day[timeBins.day][pair.properties.pair] = 0;
-      }
-      if (!stats.flows.pairs.hour[timeBins.hour][pair.properties.pair]) {
-        stats.flows.pairs.hour[timeBins.hour][pair.properties.pair] = 0;
-      }
-      if (!stats.flows.pairs.minute[timeBins.minute][pair.properties.pair]) {
-        stats.flows.pairs.minute[timeBins.minute][pair.properties.pair] = 0;
-      }
-      // increment flow pairs
-      stats.flows.pairs.day[timeBins.day][pair.properties.pair]++;
-      stats.flows.pairs.hour[timeBins.hour][pair.properties.pair]++;
-      stats.flows.pairs.minute[timeBins.minute][pair.properties.pair]++;
-    }
+  const requestData = {
+    trips: timeFilteredTrips,
+    "privacy_minimum": privacyMinimum,
+    "report_date": reportDay.format("YYYY-MM-DD")
   }
+  fs.writeFileSync('/cache/flows.json', JSON.stringify(requestData));
 
-  // filter
-  // delete sparse day pairs
-  Object.keys(stats.flows.pairs.day).forEach(day => {
-    Object.keys(stats.flows.pairs.day[day]).forEach(pair => {
-      var val = stats.flows.pairs.day[day][pair];
-      if (val < privacyMinimum) {
-        delete stats.flows.pairs.day[day][pair];
-      }
-    });
-  });
-  // delete sparse pair days
-  Object.keys(stats.flows.pairs.day).forEach(day => {
-    if (!Object.keys(stats.flows.pairs.day[day]).length) {
-      delete stats.flows.pairs.day[day];
-    }
-  });
-  // delete sparse hour pairs
-  Object.keys(stats.flows.pairs.hour).forEach(hour => {
-    Object.keys(stats.flows.pairs.hour[hour]).forEach(pair => {
-      var val = stats.flows.pairs.hour[hour][pair];
-      if (val < privacyMinimum) {
-        delete stats.flows.pairs.hour[hour][pair];
-      }
-    });
-  });
-  // delete sparse pair hours
-  Object.keys(stats.flows.pairs.hour).forEach(hour => {
-    if (!Object.keys(stats.flows.pairs.hour[hour]).length) {
-      delete stats.flows.pairs.hour[hour];
-    }
-  });
-  // delete sparse minutes pairs
-  Object.keys(stats.flows.pairs.minute).forEach(minute => {
-    Object.keys(stats.flows.pairs.minute[minute]).forEach(pair => {
-      var val = stats.flows.pairs.minute[minute][pair];
-      if (val < privacyMinimum) {
-        delete stats.flows.pairs.minute[minute][pair];
-      }
-    });
-  });
-  // delete sparse pair minutes
-  Object.keys(stats.flows.pairs.minute).forEach(minute => {
-    if (!Object.keys(stats.flows.pairs.minute[minute]).length) {
-      delete stats.flows.pairs.minute[minute];
-    }
-  });
-
-  var fc = turf.featureCollection([]);
-  Object.keys(stats.geometry.pairs).forEach(pair => {
-    fc.features.push(stats.geometry.pairs[pair]);
-  });
+  await axios.post('http://conflator/flow', requestData)
 }
 
 async function fleet(startDay, endDay, reportDay, stats, states) {
@@ -1144,234 +606,31 @@ async function fleet(startDay, endDay, reportDay, stats, states) {
   }
 }
 
-async function availability(startDay, endDay, reportDay, stats, states) {
+async function availability(startDay, endDay, reportDay, stats, changes) {
   // playback times
   // foreach 15 min:
   // foreach vehicle state:
   // find last state before current
   // if available, increment availability stat
 
-  var start = startDay.format("x");
-  var stop = endDay
-    .clone()
-    .add(1, "day")
-    .format("x");
-  var current = startDay.clone();
-  var baseDay = reportDay.format("YYYY-MM-DD");
+  const timeFilteredChanges = changes
+    .filter(change => {
+      return change.event_time >= startDay.unix() * MILLIS_PER_SECOND && change.event_time <= endDay.unix() * MILLIS_PER_SECOND
+    })
+    .filter(change => !!change.matches)
+    .map(change => {
+      delete change["event_location"]
+      delete change.matches.streetGeometry;
+      return change;
+    });
 
-  while (current.format("YYYY-MM-DD") <= endDay.format("YYYY-MM-DD")) {
-    var vehicle_ids = Object.keys(states);
-    for (let vehicle_id of vehicle_ids) {
-      var lastAvailable;
-      states[vehicle_id].forEach(state => {
-        if (state.vehicle_state === "available") {
-          var timestamp = moment(state.event_time, "x");
-
-          if (timestamp.diff(current) <= 0) {
-            lastAvailable = state;
-          }
-        }
-      });
-
-      if (lastAvailable) {
-        // availability hex bins
-        var bin = h3.geoToH3(
-          lastAvailable.event_location.geometry.coordinates[1],
-          lastAvailable.event_location.geometry.coordinates[0],
-          Z
-        );
-
-        // store geo
-        var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
-          bin: bin
-        });
-        stats.geometry.bins[bin] = geo;
-
-        // bootstrap bin
-        if (
-          !stats.availability.bins.minute[current.format(baseDay + "-HH-mm")]
-        ) {
-          stats.availability.bins.minute[current.format(baseDay + "-HH-mm")] = {};
-        }
-        if (!stats.availability.bins.minute[current.format(baseDay + "-HH-mm")][bin]) {
-          stats.availability.bins.minute[current.format(baseDay + "-HH-mm")][bin] = 1;
-        } else stats.availability.bins.minute[current.format(baseDay + "-HH-mm")][bin]++;
-
-        var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
-          bin: bin
-        });
-        stats.geometry.bins[bin] = geo;
-
-        // availability zones
-        if (lastAvailable.matches.zones) {
-          if (
-            !stats.availability.zones.minute[current.format(baseDay + "-HH-mm")]
-          ) {
-            stats.availability.zones.minute[current.format(baseDay + "-HH-mm")] = {};
-          }
-          if (!stats.availability.zones.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zones]) {
-            stats.availability.zones.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zones] = 1;
-          } else {
-            stats.availability.zones.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zones]++;
-          }
-        }
-
-        // availability street refs
-        var matches = lastAvailable.matches.streets;
-        console.log(matches);
-
-        if (matches && matches.length) {
-          var ref = matches[0].geometryId;
-          // cache geometry from ref
-          var geo = JSON.parse(
-            JSON.stringify(graph.tileIndex.featureIndex.get(ref))
-          );
-          geo.properties = {
-            ref: ref
-          };
-          stats.geometry.streets[ref] = geo;
-
-          // bootstrap ref
-          if (
-            !stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-              ]
-          ) {
-            stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-              ] = {};
-          }
-          if (
-            !stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-              ][ref]
-          ) {
-            stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-              ][ref] = 1;
-          } else {
-            stats.availability.streets.minute[
-              current.format(baseDay + "-HH-mm")
-              ][ref]++;
-          }
-        }
-      }
-    }
-
-    current = current.add(15, "minutes");
+  const requestData = {
+    'status_changes': timeFilteredChanges,
+    "report_date": reportDay.format("YYYY-MM-DD")
   }
+  fs.writeFileSync('/cache/availability.json', JSON.stringify(requestData));
 
-  // find max availability per hour
-  // hex
-  Object.keys(stats.availability.bins.minute).forEach(minute => {
-    var hour = minute.slice(0, minute.length - 3);
-    if (!stats.availability.bins.hour[hour]) {
-      stats.availability.bins.hour[hour] = {};
-    }
-
-    Object.keys(stats.availability.bins.minute[minute]).forEach(bin => {
-      var val = stats.availability.bins.minute[minute][bin];
-
-      if (
-        !stats.availability.bins.hour[hour][bin] ||
-        stats.availability.bins.hour[hour][bin] < val
-      ) {
-        stats.availability.bins.hour[hour][bin] = val;
-      }
-    });
-  });
-  // zones
-  Object.keys(stats.availability.zones.minute).forEach(minute => {
-    var hour = minute.slice(0, minute.length - 3);
-    if (!stats.availability.zones.hour[hour]) {
-      stats.availability.zones.hour[hour] = {};
-    }
-
-    Object.keys(stats.availability.zones.minute[minute]).forEach(zone => {
-      var val = stats.availability.zones.minute[minute][zone];
-
-      if (
-        !stats.availability.zones.hour[hour][zone] ||
-        stats.availability.zones.hour[hour][zone] < val
-      ) {
-        stats.availability.zones.hour[hour][zone] = val;
-      }
-    });
-  });
-  // streets
-  Object.keys(stats.availability.streets.minute).forEach(minute => {
-    var hour = minute.slice(0, minute.length - 3);
-    if (!stats.availability.streets.hour[hour]) {
-      stats.availability.streets.hour[hour] = {};
-    }
-
-    Object.keys(stats.availability.streets.minute[minute]).forEach(ref => {
-      var val = stats.availability.streets.minute[minute][ref];
-
-      if (
-        !stats.availability.streets.hour[hour][ref] ||
-        stats.availability.streets.hour[hour][ref] < val
-      ) {
-        stats.availability.streets.hour[hour][ref] = val;
-      }
-    });
-  });
-
-  // find max availability per day
-  // hex
-  Object.keys(stats.availability.bins.hour).forEach(hour => {
-    var day = hour.slice(0, hour.length - 3);
-    if (!stats.availability.bins.day[day]) {
-      stats.availability.bins.day[day] = {};
-    }
-
-    Object.keys(stats.availability.bins.hour[hour]).forEach(bin => {
-      var val = stats.availability.bins.hour[hour][bin];
-
-      if (
-        !stats.availability.bins.day[day][bin] ||
-        stats.availability.bins.day[day][bin] < val
-      ) {
-        stats.availability.bins.day[day][bin] = val;
-      }
-    });
-  });
-  // zones
-  Object.keys(stats.availability.zones.hour).forEach(hour => {
-    var day = hour.slice(0, hour.length - 3);
-    if (!stats.availability.zones.day[day]) {
-      stats.availability.zones.day[day] = {};
-    }
-
-    Object.keys(stats.availability.zones.hour[hour]).forEach(zone => {
-      var val = stats.availability.zones.hour[hour][zone];
-
-      if (
-        !stats.availability.zones.day[day][zone] ||
-        stats.availability.zones.day[day][zone] < val
-      ) {
-        stats.availability.zones.day[day][zone] = val;
-      }
-    });
-  });
-  // streets
-  Object.keys(stats.availability.streets.hour).forEach(hour => {
-    var day = hour.slice(0, hour.length - 3);
-    if (!stats.availability.streets.day[day]) {
-      stats.availability.streets.day[day] = {};
-    }
-
-    Object.keys(stats.availability.streets.hour[hour]).forEach(ref => {
-      var val = stats.availability.streets.hour[hour][ref];
-
-      if (
-        !stats.availability.streets.day[day][ref] ||
-        stats.availability.streets.day[day][ref] < val
-      ) {
-        stats.availability.streets.day[day][ref] = val;
-      }
-    });
-  });
+  await axios.post('http://conflator/availability', requestData)
 }
 
 async function onstreet(startDay, endDay, reportDay, stats, states) {
@@ -1407,7 +666,7 @@ async function onstreet(startDay, endDay, reportDay, stats, states) {
       });
 
       if (lastAvailable) {
-        // onstreet hex bins
+        // onstreet hex bin
         var bin = h3.geoToH3(
           lastAvailable.event_location.geometry.coordinates[1],
           lastAvailable.event_location.geometry.coordinates[0],
@@ -1418,42 +677,42 @@ async function onstreet(startDay, endDay, reportDay, stats, states) {
         var geo = turf.polygon([h3.h3ToGeoBoundary(bin, true)], {
           bin: bin
         });
-        stats.geometry.bins[bin] = geo;
+        stats.geometry.bin[bin] = geo;
 
         // bootstrap bin
-        if (!stats.onstreet.bins.minute[current.format(baseDay + "-HH-mm")]) {
-          stats.onstreet.bins.minute[current.format(baseDay + "-HH-mm")] = {};
+        if (!stats.onstreet.bin.minute[current.format(baseDay + "-HH-mm")]) {
+          stats.onstreet.bin.minute[current.format(baseDay + "-HH-mm")] = {};
         }
         if (
-          !stats.onstreet.bins.minute[current.format(baseDay + "-HH-mm")][bin]
+          !stats.onstreet.bin.minute[current.format(baseDay + "-HH-mm")][bin]
         ) {
-          stats.onstreet.bins.minute[current.format(baseDay + "-HH-mm")][
+          stats.onstreet.bin.minute[current.format(baseDay + "-HH-mm")][
             bin
             ] = 1;
         } else {
-          stats.onstreet.bins.minute[current.format(baseDay + "-HH-mm")][bin]++;
+          stats.onstreet.bin.minute[current.format(baseDay + "-HH-mm")][bin]++;
         }
 
-        // onstreet zones
-        if (lastAvailable.matches.zones) {
+        // onstreet zone
+        if (lastAvailable.matches.zone) {
           if (
-            !stats.onstreet.zones.minute[current.format(baseDay + "-HH-mm")]
+            !stats.onstreet.zone.minute[current.format(baseDay + "-HH-mm")]
           ) {
-            stats.onstreet.zones.minute[
+            stats.onstreet.zone.minute[
               current.format(baseDay + "-HH-mm")
               ] = {};
           }
           if (
-            !stats.onstreet.zones.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zones]
+            !stats.onstreet.zone.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zone]
           ) {
-            stats.onstreet.zones.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zones] = 1;
+            stats.onstreet.zone.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zone] = 1;
           } else {
-            stats.onstreet.zones.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zones]++;
+            stats.onstreet.zone.minute[current.format(baseDay + "-HH-mm")][lastAvailable.matches.zone]++;
           }
         }
 
         // onstreet street refs
-        // var matches = lastAvailable.matches.streets;
+        // var matches = lastAvailable.matches.street;
         // if (matches && matches.length) {
         //   var ref = matches[0].geometryId;
         //   // cache geometry from ref
@@ -1463,26 +722,26 @@ async function onstreet(startDay, endDay, reportDay, stats, states) {
         //   geo.properties = {
         //     ref: ref
         //   };
-        //   stats.geometry.streets[ref] = geo;
+        //   stats.geometry.street[ref] = geo;
         //
         //   // bootstrap ref
         //   if (
-        //     !stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")]
+        //     !stats.onstreet.street.minute[current.format(baseDay + "-HH-mm")]
         //   ) {
-        //     stats.onstreet.streets.minute[
+        //     stats.onstreet.street.minute[
         //       current.format(baseDay + "-HH-mm")
         //       ] = {};
         //   }
         //   if (
-        //     !stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
+        //     !stats.onstreet.street.minute[current.format(baseDay + "-HH-mm")][
         //       ref
         //       ]
         //   ) {
-        //     stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
+        //     stats.onstreet.street.minute[current.format(baseDay + "-HH-mm")][
         //       ref
         //       ] = 1;
         //   } else {
-        //     stats.onstreet.streets.minute[current.format(baseDay + "-HH-mm")][
+        //     stats.onstreet.street.minute[current.format(baseDay + "-HH-mm")][
         //       ref
         //       ]++;
         //   }
@@ -1495,112 +754,112 @@ async function onstreet(startDay, endDay, reportDay, stats, states) {
 
   // find max onstreet per hour
   // hex
-  Object.keys(stats.onstreet.bins.minute).forEach(minute => {
+  Object.keys(stats.onstreet.bin.minute).forEach(minute => {
     var hour = minute.slice(0, minute.length - 3);
-    if (!stats.onstreet.bins.hour[hour]) {
-      stats.onstreet.bins.hour[hour] = {};
+    if (!stats.onstreet.bin.hour[hour]) {
+      stats.onstreet.bin.hour[hour] = {};
     }
 
-    Object.keys(stats.onstreet.bins.minute[minute]).forEach(bin => {
-      var val = stats.onstreet.bins.minute[minute][bin];
+    Object.keys(stats.onstreet.bin.minute[minute]).forEach(bin => {
+      var val = stats.onstreet.bin.minute[minute][bin];
 
       if (
-        !stats.onstreet.bins.hour[hour][bin] ||
-        stats.onstreet.bins.hour[hour][bin] < val
+        !stats.onstreet.bin.hour[hour][bin] ||
+        stats.onstreet.bin.hour[hour][bin] < val
       ) {
-        stats.onstreet.bins.hour[hour][bin] = val;
+        stats.onstreet.bin.hour[hour][bin] = val;
       }
     });
   });
-  // zones
-  Object.keys(stats.onstreet.zones.minute).forEach(minute => {
+  // zone
+  Object.keys(stats.onstreet.zone.minute).forEach(minute => {
     var hour = minute.slice(0, minute.length - 3);
-    if (!stats.onstreet.zones.hour[hour]) {
-      stats.onstreet.zones.hour[hour] = {};
+    if (!stats.onstreet.zone.hour[hour]) {
+      stats.onstreet.zone.hour[hour] = {};
     }
 
-    Object.keys(stats.onstreet.zones.minute[minute]).forEach(zone => {
-      var val = stats.onstreet.zones.minute[minute][zone];
+    Object.keys(stats.onstreet.zone.minute[minute]).forEach(zone => {
+      var val = stats.onstreet.zone.minute[minute][zone];
 
       if (
-        !stats.onstreet.zones.hour[hour][zone] ||
-        stats.onstreet.zones.hour[hour][zone] < val
+        !stats.onstreet.zone.hour[hour][zone] ||
+        stats.onstreet.zone.hour[hour][zone] < val
       ) {
-        stats.onstreet.zones.hour[hour][zone] = val;
+        stats.onstreet.zone.hour[hour][zone] = val;
       }
     });
   });
-  // streets
-  Object.keys(stats.onstreet.streets.minute).forEach(minute => {
+  // street
+  Object.keys(stats.onstreet.street.minute).forEach(minute => {
     var hour = minute.slice(0, minute.length - 3);
-    if (!stats.onstreet.streets.hour[hour]) {
-      stats.onstreet.streets.hour[hour] = {};
+    if (!stats.onstreet.street.hour[hour]) {
+      stats.onstreet.street.hour[hour] = {};
     }
 
-    Object.keys(stats.onstreet.streets.minute[minute]).forEach(ref => {
-      var val = stats.onstreet.streets.minute[minute][ref];
+    Object.keys(stats.onstreet.street.minute[minute]).forEach(ref => {
+      var val = stats.onstreet.street.minute[minute][ref];
 
       if (
-        !stats.onstreet.streets.hour[hour][ref] ||
-        stats.onstreet.streets.hour[hour][ref] < val
+        !stats.onstreet.street.hour[hour][ref] ||
+        stats.onstreet.street.hour[hour][ref] < val
       ) {
-        stats.onstreet.streets.hour[hour][ref] = val;
+        stats.onstreet.street.hour[hour][ref] = val;
       }
     });
   });
 
   // find max onstreet per day
   // hex
-  Object.keys(stats.onstreet.bins.hour).forEach(hour => {
+  Object.keys(stats.onstreet.bin.hour).forEach(hour => {
     var day = hour.slice(0, hour.length - 3);
-    if (!stats.onstreet.bins.day[day]) {
-      stats.onstreet.bins.day[day] = {};
+    if (!stats.onstreet.bin.day[day]) {
+      stats.onstreet.bin.day[day] = {};
     }
 
-    Object.keys(stats.onstreet.bins.hour[hour]).forEach(bin => {
-      var val = stats.onstreet.bins.hour[hour][bin];
+    Object.keys(stats.onstreet.bin.hour[hour]).forEach(bin => {
+      var val = stats.onstreet.bin.hour[hour][bin];
 
       if (
-        !stats.onstreet.bins.day[day][bin] ||
-        stats.onstreet.bins.day[day][bin] < val
+        !stats.onstreet.bin.day[day][bin] ||
+        stats.onstreet.bin.day[day][bin] < val
       ) {
-        stats.onstreet.bins.day[day][bin] = val;
+        stats.onstreet.bin.day[day][bin] = val;
       }
     });
   });
   // zone
-  Object.keys(stats.onstreet.zones.hour).forEach(hour => {
+  Object.keys(stats.onstreet.zone.hour).forEach(hour => {
     var day = hour.slice(0, hour.length - 3);
-    if (!stats.onstreet.zones.day[day]) {
-      stats.onstreet.zones.day[day] = {};
+    if (!stats.onstreet.zone.day[day]) {
+      stats.onstreet.zone.day[day] = {};
     }
 
-    Object.keys(stats.onstreet.zones.hour[hour]).forEach(zone => {
-      var val = stats.onstreet.zones.hour[hour][zone];
+    Object.keys(stats.onstreet.zone.hour[hour]).forEach(zone => {
+      var val = stats.onstreet.zone.hour[hour][zone];
 
       if (
-        !stats.onstreet.zones.day[day][zone] ||
-        stats.onstreet.zones.day[day][zone] < val
+        !stats.onstreet.zone.day[day][zone] ||
+        stats.onstreet.zone.day[day][zone] < val
       ) {
-        stats.onstreet.zones.day[day][zone] = val;
+        stats.onstreet.zone.day[day][zone] = val;
       }
     });
   });
-  // streets
-  Object.keys(stats.onstreet.streets.hour).forEach(hour => {
+  // street
+  Object.keys(stats.onstreet.street.hour).forEach(hour => {
     var day = hour.slice(0, hour.length - 3);
-    if (!stats.onstreet.streets.day[day]) {
-      stats.onstreet.streets.day[day] = {};
+    if (!stats.onstreet.street.day[day]) {
+      stats.onstreet.street.day[day] = {};
     }
 
-    Object.keys(stats.onstreet.streets.hour[hour]).forEach(ref => {
-      var val = stats.onstreet.streets.hour[hour][ref];
+    Object.keys(stats.onstreet.street.hour[hour]).forEach(ref => {
+      var val = stats.onstreet.street.hour[hour][ref];
 
       if (
-        !stats.onstreet.streets.day[day][ref] ||
-        stats.onstreet.streets.day[day][ref] < val
+        !stats.onstreet.street.day[day][ref] ||
+        stats.onstreet.street.day[day][ref] < val
       ) {
-        stats.onstreet.streets.day[day][ref] = val;
+        stats.onstreet.street.day[day][ref] = val;
       }
     });
   });

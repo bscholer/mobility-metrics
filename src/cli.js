@@ -52,31 +52,58 @@ if (argv.help || argv.h || Object.keys(argv).length === 1) {
 }
 
 const config = require(path.resolve(argv.config));
-// add spatial indices to zones
-if (!config.zones) {
-  config.zones = turf.FeatureCollection([]);
+// add spatial indices to zone
+if (!config.zone) {
+  config.zone = turf.FeatureCollection([]);
 }
 // it's a file path, with the base directory being the config file
-else if (typeof config.zones === 'string') {
-  console.log('loading zones from', config.zones);
-  config.zones = JSON.parse(fs.readFileSync(path.resolve(path.dirname(argv.config), config.zones)));
+else if (typeof config.zone === 'string') {
+  console.log('loading zone from', config.zone);
+  config.zone = JSON.parse(fs.readFileSync(path.resolve(path.dirname(argv.config), config.zone)));
   // replace the id field
   if (config.zoneIdField) {
-    config.zones.features.forEach(f => {
+    config.zone.features.forEach(f => {
       f.properties.id = f.properties[config.zoneIdField];
       delete f.properties[config.zoneIdField];
     });
   }
 }
+
+// add spatial indices to jurisdiction
+if (!config.jurisdiction) {
+  config.jurisdiction = turf.FeatureCollection([]);
+}
+// it's a file path, with the base directory being the config file
+else if (typeof config.jurisdiction === 'string') {
+  console.log('loading jurisdiction from', config.jurisdiction);
+  config.jurisdiction = JSON.parse(fs.readFileSync(path.resolve(path.dirname(argv.config), config.jurisdiction)));
+  // replace the id field
+  if (config.jurisdictionIdField) {
+    config.jurisdiction.features.forEach(f => {
+      f.properties.id = f.properties[config.jurisdictionIdField];
+      delete f.properties[config.jurisdictionIdField];
+    });
+  }
+}
+
 const z = 19;
 const zs = { min_zoom: z, max_zoom: z };
-for (let zone of config.zones.features) {
+for (let zone of config.zone.features) {
   zone.properties.keys = {};
   const keys = cover.indexes(zone.geometry, zs);
   for (let key of keys) {
     zone.properties.keys[key] = 1;
   }
 }
+
+for (let jurisdiction of config.jurisdiction.features) {
+  jurisdiction.properties.keys = {};
+  const keys = cover.indexes(jurisdiction.geometry, zs);
+  for (let key of keys) {
+    jurisdiction.properties.keys[key] = 1;
+  }
+}
+
 // build geographicFilter lookup
 if (config.geographicFilter) {
   config.geographicFilterKeys = {};
@@ -98,8 +125,9 @@ if (
 // defaults
 if (!config.zoom) config.zoom = 12.5;
 if (!config.lost) config.lost = 2;
-if (!config.privacyMinimum || config.privacyMinimum < 3)
-  config.privacyMinimum = 3;
+if (!config.Z) config.Z = 9;
+if (!config.privacyMinimum || config.privacyMinimum < 2)
+  config.privacyMinimum = 2;
 if (!config.summary)
   config.summary = {
     "Unique Vehicles": true,

@@ -51,52 +51,70 @@ module.exports = async function (trip, config) {
       headers: { "Content-Type": "application/json" }
     })
   // console.log(res.data);
-  res.data.streets.geometry = JSON.parse(res.data.streets.geometry);
+  res.data.street.geometry = JSON.parse(res.data.street.geometry);
   const match = {
-    segments: res.data.streets.roadsegid,
+    segment: res.data.street.roadsegid,
     matchedPath: {
       type: "Feature",
       properties: {},
       geometry: {
         type: "MultiLineString",
-        coordinates: res.data.streets.roadsegid.map((id) => {
-          return res.data.streets.geometry.features.find((f) => `${f.id}` === `${id}`).geometry.coordinates;
+        coordinates: res.data.street.roadsegid.map((id) => {
+          return res.data.street.geometry.features.find((f) => `${f.id}` === `${id}`).geometry.coordinates;
         })
       }
     },
   }
 
+  // reformat slightly
   if (res.data.zone.zoneid) {
-    trip.matches.zones = res.data.zone.zoneid;
+    trip.matches.zone = res.data.zone.zoneid;
   }
 
-  console.log(res.data.streets);
+  if (res.data.jurisdiction.jurisdictionid) {
+    trip.matches.jurisdiction = res.data.jurisdiction.jurisdictionid;
+  }
+
+  // bin
+  trip.matches.bin = trip.route.features.map(ping => h3.geoToH3(
+    ping.geometry.coordinates[1],
+    ping.geometry.coordinates[0],
+    config.Z
+  ));
+
+  // console.log(res.data.street);
+  // console.log(trip.matches.bin);
   const pickupMatch = {
-    street: res.data.streets.pickup,
+    street: res.data.street.pickup,
     zone: res.data.zone.pickup,
-    bin: h3.geoToH3(
-      trip.route.features[0].geometry.coordinates[1],
-      trip.route.features[0].geometry.coordinates[0],
-      config.Z
-    )
+    jurisdiction: res.data.jurisdiction.pickup,
+    bin: trip.matches.bin[0],
   }
 
   const dropoffMatch = {
-    street: res.data.streets.dropoff,
+    street: res.data.street.dropoff,
     zone: res.data.zone.dropoff,
-    bin: h3.geoToH3(
-      trip.route.features[trip.route.features.length - 1].geometry.coordinates[1],
-      trip.route.features[trip.route.features.length - 1].geometry.coordinates[0],
-      config.Z
-    )
+    jurisdiction: res.data.jurisdiction.dropoff,
+    bin: trip.matches.bin[trip.matches.bin.length - 1],
   }
 
-  if (pickupMatch.street || pickupMatch.zone || pickupMatch.bin) {
+  const flowMatch = {
+    street: `${res.data.street.pickup}>${res.data.street.dropoff}`,
+    zone: `${res.data.zone.pickup}>${res.data.zone.dropoff}`,
+    jurisdiction: `${res.data.jurisdiction.pickup}>${res.data.jurisdiction.dropoff}`,
+    bin: `${pickupMatch.bin}>${dropoffMatch.bin}`
+  }
+
+  if (pickupMatch.street || pickupMatch.zone || pickupMatch.bin || pickupMatch.jurisdiction) {
     trip.matches.pickup = pickupMatch;
   }
 
-  if (dropoffMatch.street || dropoffMatch.zone || dropoffMatch.bin) {
+  if (dropoffMatch.street || dropoffMatch.zone || dropoffMatch.bin || dropoffMatch.jurisdiction) {
     trip.matches.dropoff = dropoffMatch;
+  }
+
+  if (flowMatch.street || flowMatch.zone || flowMatch.bin || flowMatch.jurisdiction) {
+    trip.matches.flow = flowMatch;
   }
 
   if (
@@ -107,23 +125,10 @@ module.exports = async function (trip, config) {
     match.matchedPath.geometry.coordinates &&
     match.matchedPath.geometry.coordinates.length === match.segments.length
   ) {
-    trip.matches.streets = match;
+    trip.matches.street = match;
   }
 
-  // HEXES
-
-  var bins = [];
-  trip.route.features.forEach(ping => {
-    var bin = h3.geoToH3(
-      ping.geometry.coordinates[1],
-      ping.geometry.coordinates[0],
-      config.Z
-    );
-    bins.push(bin);
-    // bins[bin] = 1;
-  });
-
-  trip.matches.bins = bins;
+  // trip.matches.bin = bin;
 
   // ZONES
 

@@ -8,7 +8,7 @@ const moment = require("moment");
 
 async function report(
   config,
-  providers,
+  // providers,
   publicPath,
   startDay,
   endDay,

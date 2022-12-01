@@ -26,10 +26,10 @@ const cache = async function (
   const stop = Math.round(+endDay.endOf('day').format("x"));
 
   const cacheDayPath = path.join(cachePath, reportDay.format("YYYY-MM-DD"));
-  const cacheDayAllPath = path.join(cacheDayPath, "./All");
-  const cacheDayAllTripsPath = path.join(cacheDayAllPath, "trips.json");
-  const cacheDayAllChangesPath = path.join(cacheDayAllPath, "changes.json");
-  mkdirp.sync(cacheDayAllPath);
+  // const cacheDayAllPath = path.join(cacheDayPath, "./All");
+  // const cacheDayAllTripsPath = path.join(cacheDayAllPath, "trips.json");
+  // const cacheDayAllChangesPath = path.join(cacheDayAllPath, "changes.json");
+  // mkdirp.sync(cacheDayAllPath);
 
   for (let name of providers) {
     const provider = config.providers[name];
@@ -39,14 +39,8 @@ const cache = async function (
     mkdirp.sync(cacheDayProviderPath);
 
     const cacheDayProviderLogPath = path.join(cacheDayProviderPath, "log.txt");
-    const cacheDayProviderTripsPath = path.join(
-      cacheDayProviderPath,
-      "trips.json"
-    );
-    const cacheDayProviderChangesPath = path.join(
-      cacheDayProviderPath,
-      "changes.json"
-    );
+    const cacheDayTripsPath = path.join(cacheDayPath, "trips.json");
+    const cacheDayChangesPath = path.join(cacheDayPath, "changes.json");
 
     // I don't think this is necessary. I had added it to make sure that the files existed, but it was only causing
     // problems when the cache directory was not empty.
@@ -63,17 +57,17 @@ const cache = async function (
     // });
     // await fh.close();
 
-    var cacheDayProviderTripsStream = fs.createWriteStream(
-      cacheDayProviderTripsPath
+    var cacheDayTripsStream = fs.createWriteStream(
+      cacheDayTripsPath
     );
-    var cacheDayProviderChangesStream = fs.createWriteStream(
-      cacheDayProviderChangesPath
+    var cacheDayChangesStream = fs.createWriteStream(
+      cacheDayChangesPath
     );
 
     if (provider.type === "mds") {
       await mds.cacheFromMds(
         provider,
-        cacheDayProviderTripsStream,
+        cacheDayTripsStream,
         start,
         stop,
         config,
@@ -85,7 +79,7 @@ const cache = async function (
       });
       await mds.cacheFromMds(
         provider,
-        cacheDayProviderChangesStream,
+        cacheDayChangesStream,
         start,
         stop,
         config,
@@ -98,7 +92,7 @@ const cache = async function (
     } else if (provider.type === "local") {
       await local.trips(
         provider,
-        cacheDayProviderTripsStream,
+        cacheDayTripsStream,
         start,
         stop,
         config,
@@ -107,7 +101,7 @@ const cache = async function (
       );
       await local.changes(
         provider,
-        cacheDayProviderChangesStream,
+        cacheDayChangesStream,
         start,
         stop,
         config,
@@ -116,11 +110,11 @@ const cache = async function (
       );
     }
 
-    const tripsData = fs.readFileSync(cacheDayProviderTripsPath).toString();
-    const changesData = fs.readFileSync(cacheDayProviderChangesPath).toString();
+    // const tripsData = fs.readFileSync(cacheDayTripsPath).toString();
+    // const changesData = fs.readFileSync(cacheDayChangesPath).toString();
 
-    fs.appendFileSync(cacheDayAllTripsPath, tripsData);
-    fs.appendFileSync(cacheDayAllChangesPath, changesData);
+    // fs.appendFileSync(cacheDayAllTripsPath, tripsData);
+    // fs.appendFileSync(cacheDayAllChangesPath, changesData);
   }
 };
 

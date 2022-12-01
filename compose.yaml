@@ -14,6 +14,7 @@ services:
   conflator:
     image: mobility-metrics-conflator
     build: ../mobility-metrics-conflator/
+    env_file: ../mobility-metrics-conflator/.env
     volumes:
       - C:\Users\bscholer\Documents\Projects\mobility-metrics-conflator\data:/data
       - C:\Users\bscholer\Documents\Projects\mobility-metrics-conflator\cache:/cache

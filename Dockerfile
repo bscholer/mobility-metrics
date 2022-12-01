@@ -25,4 +25,4 @@ RUN find src/ -type f -print0 | xargs -0 dos2unix
 RUN ln -s /app/src/cli.js /usr/bin/mobility-metrics
 
 # send it!
-CMD ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public", "--cache", "/cache", "--endDay", "2022-09-20"]
+CMD ["mobility-metrics", "--config", "/data/config.json", "--public", "/data/public", "--cache", "/cache", "--startDay", "2022-09-21", "--endDay", "2022-10-31"]

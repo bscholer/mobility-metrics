@@ -4,7 +4,7 @@ const changeMatch = require("../matchers/change");
 const crypto = require("crypto");
 const axios = require("axios");
 
-const DEBUG = true;
+const DEBUG = false;
 
 async function cacheFromMds(
   provider,
