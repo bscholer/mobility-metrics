@@ -39,7 +39,6 @@ module.exports = async function (trip, config) {
   }
 
   // STREETS
-
   if (!trip.matches) trip.matches = {};
 
   // console.log(`number of points: ${trip.route.features.length}`);
@@ -48,8 +47,9 @@ module.exports = async function (trip, config) {
 
   let res = await axios.post(`http://conflator/match_line`, { line: wkt },
     {
-      headers: { "Content-Type": "application/json" }
-    })
+      headers: { "Content-Type": "application/json" },
+      timeout: 60 * 60 * 1000 // 60 minutes
+    });
   // console.log(res.data);
   res.data.street.geometry = JSON.parse(res.data.street.geometry);
   const match = {
@@ -119,11 +119,11 @@ module.exports = async function (trip, config) {
 
   if (
     match &&
-    match.segments &&
+    match.segment &&
     match.matchedPath &&
     match.matchedPath.geometry &&
     match.matchedPath.geometry.coordinates &&
-    match.matchedPath.geometry.coordinates.length === match.segments.length
+    match.matchedPath.geometry.coordinates.length === match.segment.length
   ) {
     trip.matches.street = match;
   }

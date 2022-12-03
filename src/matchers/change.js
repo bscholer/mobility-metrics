@@ -30,7 +30,8 @@ module.exports = async function (change, config, graph) {
       `http://conflator/match_point`,
       { point: wkt },
       {
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        timeout: 60 * 60 * 1000 // 60 minutes
       });
     res.data.street.geometry = JSON.parse(res.data.street.geometry);
     // const match = res.data.street.roadsegid;
@@ -85,8 +86,6 @@ module.exports = async function (change, config, graph) {
     //   change.matches.zones = zoneMatches;
     // }
     // }
-
-    console.log(change.matches)
     return change;
   }
 };
