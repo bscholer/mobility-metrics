@@ -386,8 +386,9 @@ const summarize = async function (
     // console.log("      fleet sizes...");
     // await fleet(startDay, endDay, reportDay, stats, states);
 
+    const promises = [];
     console.log("      trip volumes...");
-    await tripVolumes(
+    promises.push(tripVolumes(
       startDay,
       endDay,
       reportDay,
@@ -395,17 +396,19 @@ const summarize = async function (
       trips,
       privacyMinimum,
       config
-    );
+    ));
     // console.log("      availability...");
     // await availability(startDay, endDay, reportDay, stats, changes, config);
     // console.log("      onstreet...");
     // await onstreet(startDay, endDay, reportDay, stats, states, config);
     console.log("      pickups...");
-    await pickups(startDay, endDay, reportDay, stats, trips, config);
+    promises.push(pickups(startDay, endDay, reportDay, stats, trips, config));
     console.log("      dropoffs...");
-    await dropoffs(startDay, endDay, reportDay, stats, trips, config);
+    promises.push(dropoffs(startDay, endDay, reportDay, stats, trips, config));
     console.log("      flows...");
-    await flows(startDay, endDay, reportDay, stats, trips, privacyMinimum);
+    promises.push(flows(startDay, endDay, reportDay, stats, trips, privacyMinimum));
+
+    await Promise.all(promises);
 
     // var summaryPath = path.join(
     //   publicPath,

@@ -18,7 +18,7 @@ if (argv.version || argv.v) {
   process.exit(0);
 }
 
-let dateOption;
+let dateOption = null;
 
 if (argv.help || argv.h || Object.keys(argv).length === 1) {
   var help = "";
@@ -28,6 +28,8 @@ if (argv.help || argv.h || Object.keys(argv).length === 1) {
   help += "--config      path to config json file\n";
   help += "--public      path to public metric directory\n";
   help += "--cache       path to temporary data cache\n";
+  help += "DATE OPTION 0 (generate report for single day, yesterday):\n";
+  help += "NO FLAGS NECESSARY\n"
   help += "DATE OPTION 1 (generate report for single day):\n";
   help += "--endDay         day to generate report for (YYYY-MM-DD)\n";
   help += "DATE OPTION 2 (generate reports for multiple days):\n";
@@ -45,10 +47,11 @@ if (argv.help || argv.h || Object.keys(argv).length === 1) {
   if (!argv.public) throw new Error("specify public metric directory");
   if (!argv.cache) throw new Error("specify temporary data cache");
 
-  if (!argv.startDay && argv.endDay && !argv.reportDay) dateOption = 1;
+  if (!argv.startDay && !argv.endDay && !argv.reportDay) dateOption = 0;
+  else if (!argv.startDay && argv.endDay && !argv.reportDay) dateOption = 1;
   else if (argv.startDay && argv.endDay && !argv.reportDay) dateOption = 2;
   else if (argv.startDay && argv.endDay && argv.reportDay) dateOption = 3;
-  if (!dateOption) throw new Error("Please use one of the options for dates from running 'mobility-metrics --help'");
+  if (dateOption === null) throw new Error("Please use one of the options for dates from running 'mobility-metrics --help'");
 }
 
 const config = require(path.resolve(argv.config));
@@ -160,7 +163,9 @@ const backfill = async function (startDay, endDay, reportDay) {
       config
     );
 
-    console.log("\ncompleted backfill");
+    console.log("\ncompleted backfill, removing cache");
+    rimraf(cachePath, () => {
+    });
     resolve();
   });
 };
@@ -168,6 +173,11 @@ const backfill = async function (startDay, endDay, reportDay) {
 // console.log("DATE OPTION: " + dateOption);
 const dateArray = []; // [startDay, endDay, reportDay]
 switch (dateOption) {
+  case 0:
+    console.log("Generating report for yesterday");
+    const yesterday = moment().subtract(1, "days").startOf("day");
+    dateArray.push([yesterday.clone(), yesterday.clone(), yesterday.clone()]);
+    break;
   case 1:
     console.log("Generating report for single day: " + argv.endDay);
     dateArray.push([moment(argv.endDay), moment(argv.endDay), moment(argv.endDay)]);
@@ -190,6 +200,4 @@ switch (dateOption) {
 // run it
 dateArray.reduce((p, dates) => p.then(() => backfill(...dates)), Promise.resolve()).then(() => {
 });
-// rimraf(cachePath, () => {
-// });
 
