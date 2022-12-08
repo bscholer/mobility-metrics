@@ -24,42 +24,11 @@ const summarize = async function (
   config
 ) {
   return new Promise(async (resolve, reject) => {
-    // import all providers
-    // const providers = Object.keys(config.providers).filter(provider => {
-    //   return config.providers[provider].enabled;
-    // });
-    // providers.push("All");
-
     var cacheDayPath = path.join(cachePath, reportDay.format("YYYY-MM-DD"));
     if (!fs.existsSync(cacheDayPath)) {
       console.log("  caching...");
       await cache(startDay, endDay, reportDay, cachePath, config);
     }
-
-    // console.log("  linear referencing...");
-    // for (let provider of providers) {
-    //   await new Promise(async (resolve, reject) => {
-    //     var cacheProviderPath = path.join(cacheDayPath, provider);
-    //     const { spawn } = require('child_process');
-    //     const tripsProc = spawn('python3', ['/app/conflator/main.py', path.join(cacheProviderPath, "trips.json")]);
-    //     // const statusProc = spawn('python3', ['/app/conflator/main.py', path.join(cacheProviderPath, "changes.json")]);
-    //
-    //     tripsProc.stdout.on('data', (data) => {
-    //       console.log(`stdout: ${data}`);
-    //     });
-    //     tripsProc.stderr.on('data', (data) => {
-    //       console.log(`stderr: ${data}`);
-    //     });
-    //
-    //     tripsProc.on('close', (code) => {
-    //       console.log(`child process exited with code ${code}`);
-    //       // statusProc.on('close', (code) => {
-    //       resolve();
-    //       // });
-    //     });
-    //   });
-    // }
-
 
     console.log("  summarizing...");
     mkdirp.sync(cacheDayPath);
@@ -384,11 +353,11 @@ const summarize = async function (
     const privacyMinimum = config.privacyMinimum;
 
     // console.log("      fleet sizes...");
-    // await fleet(startDay, endDay, reportDay, stats, states);
+    // await fleet({startDay, endDay, reportDay, stats, states});
 
-    const promises = [];
+    // const promises = [];
     console.log("      trip volumes...");
-    promises.push(tripVolumes(
+    await tripVolumes({
       startDay,
       endDay,
       reportDay,
@@ -396,19 +365,19 @@ const summarize = async function (
       trips,
       privacyMinimum,
       config
-    ));
+    });
     // console.log("      availability...");
-    // await availability(startDay, endDay, reportDay, stats, changes, config);
+    // await availability({startDay, endDay, reportDay, stats, changes, config});
     // console.log("      onstreet...");
-    // await onstreet(startDay, endDay, reportDay, stats, states, config);
+    // await onstreet({startDay, endDay, reportDay, stats, states, config});
     console.log("      pickups...");
-    promises.push(pickups(startDay, endDay, reportDay, stats, trips, config));
+    await pickups({ startDay, endDay, reportDay, stats, trips, config });
     console.log("      dropoffs...");
-    promises.push(dropoffs(startDay, endDay, reportDay, stats, trips, config));
+    await dropoffs({ startDay, endDay, reportDay, stats, trips, config });
     console.log("      flows...");
-    promises.push(flows(startDay, endDay, reportDay, stats, trips, privacyMinimum));
+    await flows({ startDay, endDay, reportDay, stats, trips, privacyMinimum, config })
 
-    await Promise.all(promises);
+    // await Promise.all(promises);
 
     // var summaryPath = path.join(
     //   publicPath,
@@ -450,13 +419,15 @@ function getTimeBins(reportDay, timestamp) {
 }
 
 async function tripVolumes(
-  startDay,
-  endDay,
-  reportDay,
-  stats,
-  trips,
-  privacyMinimum,
-) {
+  {
+    startDay,
+    endDay,
+    reportDay,
+    stats,
+    trips,
+    privacyMinimum,
+    config
+  }) {
   const timeFilteredTrips = trips
     .filter(trip => {
       return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
@@ -477,17 +448,18 @@ async function tripVolumes(
   }
   fs.writeFileSync('/cache/trip_volume.json', JSON.stringify(requestData));
 
-  await axios.post('http://conflator/trip_volume', requestData)
+  await axios.post(`${config.conflatorUrl}/trip_volume`, requestData)
 }
 
 async function pickups(
-  startDay,
-  endDay,
-  reportDay,
-  stats,
-  trips,
-  config
-) {
+  {
+    startDay,
+    endDay,
+    reportDay,
+    stats,
+    trips,
+    config
+  }) {
   const timeFilteredTrips = trips
     .filter(trip => {
       return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
@@ -507,16 +479,18 @@ async function pickups(
   }
   fs.writeFileSync('/cache/pickup.json', JSON.stringify(requestData));
 
-  await axios.post('http://conflator/pickup', requestData)
+  await axios.post(`${config.conflatorUrl}/pickup`, requestData)
 }
 
 async function dropoffs(
-  startDay,
-  endDay,
-  reportDay,
-  stats,
-  trips
-) {
+  {
+    startDay,
+    endDay,
+    reportDay,
+    stats,
+    trips,
+    config
+  }) {
   const timeFilteredTrips = trips
     .filter(trip => {
       return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
@@ -536,10 +510,10 @@ async function dropoffs(
   }
   fs.writeFileSync('/cache/dropoff.json', JSON.stringify(requestData));
 
-  await axios.post('http://conflator/dropoff', requestData)
+  await axios.post(`${config.conflatorUrl}/dropoff`, requestData)
 }
 
-async function flows(startDay, endDay, reportDay, stats, trips, privacyMinimum) {
+async function flows({ startDay, endDay, reportDay, stats, trips, privacyMinimum, config }) {
   const timeFilteredTrips = trips
     .filter(trip => {
       return trip.start_time >= startDay.unix() * MILLIS_PER_SECOND && trip.start_time <= endDay.unix() * MILLIS_PER_SECOND
@@ -560,10 +534,10 @@ async function flows(startDay, endDay, reportDay, stats, trips, privacyMinimum) 
   }
   fs.writeFileSync('/cache/flows.json', JSON.stringify(requestData));
 
-  await axios.post('http://conflator/flow', requestData)
+  await axios.post(`${config.conflatorUrl}/flow`, requestData)
 }
 
-async function fleet(startDay, endDay, reportDay, stats, states) {
+async function fleet({ startDay, endDay, reportDay, stats, states, config }) {
   // playback times
   // foreach 1 hour:
   // foreach vehicle state:
@@ -609,7 +583,7 @@ async function fleet(startDay, endDay, reportDay, stats, states) {
   }
 }
 
-async function availability(startDay, endDay, reportDay, stats, changes) {
+async function availability({ startDay, endDay, reportDay, stats, changes, config }) {
   // playback times
   // foreach 15 min:
   // foreach vehicle state:
@@ -633,10 +607,10 @@ async function availability(startDay, endDay, reportDay, stats, changes) {
   }
   fs.writeFileSync('/cache/availability.json', JSON.stringify(requestData));
 
-  await axios.post('http://conflator/availability', requestData)
+  await axios.post(`${config.conflatorUrl}/availability`, requestData)
 }
 
-async function onstreet(startDay, endDay, reportDay, stats, states) {
+async function onstreet({ startDay, endDay, reportDay, stats, states, config }) {
   // playback times
   // foreach 15 min:
   // foreach vehicle state:

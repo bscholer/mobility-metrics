@@ -1,5 +1,0 @@
-numpy
-tqdm
-geopandas
-requests
-scikit-learn

@@ -9,7 +9,7 @@ services:
       - conflator
     volumes:
       - C:\Users\bscholer\Documents\Projects\mobility-metrics\data:/data
-      - C:\Users\bscholer\Documents\Projects\mobility-metrics\cache:/cache
+#      - C:\Users\bscholer\Documents\Projects\mobility-metrics\cache:/cache
 
   conflator:
     image: mobility-metrics-conflator

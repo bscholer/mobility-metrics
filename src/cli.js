@@ -55,9 +55,11 @@ if (argv.help || argv.h || Object.keys(argv).length === 1) {
 }
 
 const config = require(path.resolve(argv.config));
+const axios = require("axios");
+const axiosRetry = require("axios-retry");
 // add spatial indices to zone
 if (!config.zone) {
-  config.zone = turf.FeatureCollection([]);
+  config.zone = turf.featureCollection([]);
 }
 // it's a file path, with the base directory being the config file
 else if (typeof config.zone === 'string') {
@@ -74,7 +76,7 @@ else if (typeof config.zone === 'string') {
 
 // add spatial indices to jurisdiction
 if (!config.jurisdiction) {
-  config.jurisdiction = turf.FeatureCollection([]);
+  config.jurisdiction = turf.featureCollection([]);
 }
 // it's a file path, with the base directory being the config file
 else if (typeof config.jurisdiction === 'string') {
@@ -144,11 +146,19 @@ if (!config.summary)
     "Avg Trip Duration": true
   };
 
+config.conflatorUrl = process.env['IS_AZURE'] ? 'http://localhost:8000' : 'http://conflator:8000';
+
 const publicPath = path.resolve(argv.public);
 const cachePath = path.resolve(argv.cache);
 
 
 const backfill = async function (startDay, endDay, reportDay) {
+  const promises = [];
+  // fire off 10 requests to make sure each worker initializes
+  for (let i = 0; i < 10; i++) {
+    promises.push(axios.get(`${config.conflatorUrl}/`))
+  }
+  await Promise.all(promises);
   startDay = startDay.startOf("day");
   endDay = endDay.endOf("day");
   console.log("backfilling from", startDay.toISOString(), 'to', endDay.toISOString());

@@ -4,7 +4,7 @@ const changeMatch = require("../matchers/change");
 const crypto = require("crypto");
 const axios = require("axios");
 
-const DEBUG = false;
+const DEBUG = true;
 
 async function cacheFromMds(
   provider,
@@ -77,27 +77,43 @@ async function cacheFromMds(
         });
       }
 
+      // valid response, just no data
+      if (!data.data[endpoint].length && data.version) {
+        console.log(`${provider.name} ${endpoint} ${hour} no data`);
+        await fs.appendFileSync(cacheDayProviderLogPath, `${new Date().toISOString()} ${provider.name} ${endpoint} ${hour} no data\n`);
+        resolve();
+        return;
+      }
+
       const timerLabel = `${hour} - ${endpoint} - match - ${data.data[endpoint].length}`;
       if (DEBUG) {
         console.log(hour, ": Got", data.data[endpoint].length, endpoint === "trips" ? "trips" : "status changes");
         console.time(timerLabel);
       }
 
-      await Promise.all(data.data[endpoint].map(async (tripOrEvent) => {
-      // for (const tripOrEvent of data.data[endpoint]) {
-        // stream.write(JSON.stringify(tripOrEvent) + "\n");
-        const match = await matchFunc(tripOrEvent, config);
-        if (match) {
-          const signature = crypto
-            .createHmac("sha256", version)
-            .update(JSON.stringify(match))
-            .digest("hex");
-          fs.appendFileSync(cacheDayProviderLogPath, signature + "\n");
-          stream.write(JSON.stringify(match) + "\n");
-        }
-      }))
-      if (DEBUG) console.timeEnd(timerLabel);
+      // send them all at once
+      const matches = await matchFunc(data.data[endpoint], config);
+      matches.forEach((match) => stream.write(JSON.stringify(match) + "\n"));
+      if (DEBUG) {
+        console.timeEnd(timerLabel);
+      }
       resolve();
+
+      // await Promise.all(data.data[endpoint].map(async (tripOrEvent) => {
+      // // for (const tripOrEvent of data.data[endpoint]) {
+      //   // stream.write(JSON.stringify(tripOrEvent) + "\n");
+      //   const match = await matchFunc(tripOrEvent, config);
+      //   if (match) {
+      //     const signature = crypto
+      //       .createHmac("sha256", version)
+      //       .update(JSON.stringify(match))
+      //       .digest("hex");
+      //     fs.appendFileSync(cacheDayProviderLogPath, signature + "\n");
+      //     stream.write(JSON.stringify(match) + "\n");
+      //   }
+      // }))
+      // if (DEBUG) console.timeEnd(timerLabel);
+      // resolve();
     })
     // });
   }))
